@@ -120,7 +120,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(rezept, { status: 201 });
   } catch (error) {
-    console.error("Fehler beim Speichern:", error);
-    return NextResponse.json({ error: "Speicherfehler" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Fehler beim Speichern:", msg);
+    return NextResponse.json({ error: "Speicherfehler", detail: msg }, { status: 500 });
   }
 }
