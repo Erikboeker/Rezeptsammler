@@ -6,7 +6,8 @@
 // und das Hochladen in den Supabase Storage.
 // ====================================================
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Cropper, { Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import { Upload, X, Check, Loader2, Crop, Pencil } from "lucide-react";
@@ -30,8 +31,14 @@ export function ImageUpload({ onUpload, currentUrl, label = "Bild hinzufügen" }
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   /** Wird aufgerufen, wenn der Zuschnitt-Bereich sich ändert */
   const onCropComplete = useCallback((_area: Area, AreaPixels: Area) => {
@@ -134,9 +141,9 @@ export function ImageUpload({ onUpload, currentUrl, label = "Bild hinzufügen" }
         )}
       </div>
 
-      {/* Cropper Modal Overlay */}
-      {showCropper && imageSrc && (
-        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center p-4">
+      {/* Cropper Modal Overlay via Portal */}
+      {mounted && showCropper && imageSrc && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 touch-none">
           <div className="w-full max-w-2xl text-center mb-6">
             <h3 className="text-white text-xl font-bold">Bild zuschneiden</h3>
             <p className="text-white/60 text-sm">Wähle den optimalen Ausschnitt (4:3)</p>
@@ -191,12 +198,13 @@ export function ImageUpload({ onUpload, currentUrl, label = "Bild hinzufügen" }
                 {isUploading ? (
                   <><Loader2 className="h-5 w-5 animate-spin" /> Upload...</>
                 ) : (
-                  <><Check className="h-5 w-5" /> Zuschnitt speichern</>
+                  <><Check className="h-5 w-5" /> Fertig</>
                 )}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

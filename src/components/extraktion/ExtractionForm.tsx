@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Loader2, Link2, ImageIcon, Upload, X, Check, Crop } from "lucide-react";
 import Cropper, { Area } from "react-easy-crop";
@@ -21,8 +22,14 @@ export function ExtractionForm() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [mimeType, setMimeType] = useState("image/jpeg");
+  const [mounted, setMounted] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const isLoading = status === "fetching" || status === "analyzing";
   const statusText: Record<ExtractionStatus, string> = {
@@ -261,15 +268,15 @@ export function ExtractionForm() {
                    </div>
                 )}
 
-                {/* Cropper Modal-like overlay */}
-                {showCropper && (
-                  <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4">
-                    <div className="relative w-full max-w-3xl aspect-[4/3] bg-muted rounded-xl overflow-hidden shadow-2xl">
+                {/* Cropper Modal-like overlay via Portal */}
+                {mounted && showCropper && imagePreview && createPortal(
+                  <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 touch-none">
+                    <div className="relative w-full max-w-3xl aspect-[4/3] bg-muted rounded-xl overflow-hidden shadow-2xl border border-white/10">
                       <Cropper
                         image={imagePreview}
                         crop={crop}
                         zoom={zoom}
-                        aspect={16 / 9} // Hier flexibler oder 16:9 für weite Rezepte
+                        aspect={16 / 9}
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
                         onCropComplete={onCropComplete}
@@ -298,7 +305,7 @@ export function ExtractionForm() {
                           type="button"
                           onClick={() => {
                             setShowCropper(false);
-                            if (!status || status === "idle") {
+                            if (status === "idle") {
                               setImagePreview(null);
                             }
                           }}
@@ -315,7 +322,8 @@ export function ExtractionForm() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
 
                 {isLoading && (
