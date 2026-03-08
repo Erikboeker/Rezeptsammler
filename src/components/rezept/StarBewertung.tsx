@@ -78,35 +78,49 @@ export function StarBewertung({
   const anzeigeWert = hoverWert ?? aktuellerWert ?? 0;
 
   return (
-    <div
-      className={`flex items-center gap-0.5 ${editierbar ? "cursor-pointer" : "cursor-default"}`}
-      onMouseLeave={() => setHoverWert(null)}
-      title={aktuellerWert ? `${aktuellerWert} von 5 Sternen` : "Noch nicht bewertet"}
-    >
-      {[1, 2, 3, 4, 5].map((sternNummer) => (
-        <button
-          key={sternNummer}
-          type="button"
-          disabled={!editierbar || laedtGerade}
-          onClick={() => handleKlick(sternNummer)}
-          onMouseEnter={() => editierbar && setHoverWert(sternNummer)}
-          className="transition-transform hover:scale-110 disabled:pointer-events-none"
-        >
-          <Star
-            className={`${groessenKlasse} transition-colors ${
-              sternNummer <= anzeigeWert
-                ? "fill-amber-400 text-amber-400"
-                : "fill-transparent text-gray-300"
-            }`}
-          />
-        </button>
-      ))}
+    <div className="space-y-1">
+      <div
+        className={`flex items-center gap-0.5 ${editierbar ? "cursor-pointer" : "cursor-default"}`}
+        onMouseLeave={() => setHoverWert(null)}
+        title={aktuellerWert ? `${aktuellerWert} von 5 Sternen` : "Noch nicht bewertet"}
+      >
+        {[1, 2, 3, 4, 5].map((sternNummer) => (
+          <button
+            key={sternNummer}
+            type="button"
+            disabled={!editierbar || laedtGerade}
+            onClick={() => handleKlick(sternNummer)}
+            onMouseEnter={() => editierbar && setHoverWert(sternNummer)}
+            className="transition-transform hover:scale-110 disabled:pointer-events-none"
+          >
+            <Star
+              className={`${groessenKlasse} transition-colors ${
+                sternNummer <= anzeigeWert
+                  ? "fill-amber-400 text-amber-400"
+                  : "fill-transparent text-gray-300"
+              }`}
+            />
+          </button>
+        ))}
 
-      {/* Textuelle Anzeige wenn bewertet */}
-      {aktuellerWert !== null && aktuellerWert !== undefined && (
-        <span className="ml-1 text-xs text-muted-foreground">
-          ({aktuellerWert}/5)
-        </span>
+        {/* Textuelle Anzeige wenn bewertet */}
+        {aktuellerWert !== null && aktuellerWert !== undefined && (
+          <span className="ml-1 text-xs text-muted-foreground">
+            ({aktuellerWert}/5)
+          </span>
+        )}
+      </div>
+
+      {/* Bewertung zurücksetzen – nur anzeigen wenn bereits bewertet */}
+      {editierbar && aktuellerWert !== null && aktuellerWert !== undefined && (
+        <button
+          type="button"
+          onClick={() => handleKlick(aktuellerWert)}
+          disabled={laedtGerade}
+          className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+        >
+          Bewertung entfernen
+        </button>
       )}
     </div>
   );

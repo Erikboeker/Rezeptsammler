@@ -5,7 +5,7 @@
 // ====================================================
 
 import Link from "next/link";
-import { Clock, Users, ExternalLink, ChevronLeft } from "lucide-react";
+import { Clock, Users, ExternalLink, ChevronLeft, Printer } from "lucide-react";
 import { Rezept } from "@/lib/types";
 import { ImageCarousel } from "./ImageCarousel";
 import { StarBewertung } from "./StarBewertung";
@@ -27,8 +27,8 @@ export function RecipeHeader({ rezept }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Zurück-Navigation + Löschen-Button in einer Zeile */}
-      <div className="flex items-center justify-between">
+      {/* Zurück-Navigation + Aktions-Buttons */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <Link
           href="/bibliothek"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -37,8 +37,20 @@ export function RecipeHeader({ rezept }: Props) {
           Zur Bibliothek
         </Link>
 
-        {/* Löschen-Button (Client-Komponente) */}
-        <RezeptLoeschen rezeptId={rezept.id} rezeptTitel={rezept.titel} />
+        <div className="flex items-center gap-2">
+          {/* Drucken / PDF / Teilen */}
+          <Link
+            href={`/rezept/${rezept.id}/drucken`}
+            target="_blank"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Printer className="h-4 w-4" />
+            PDF / Teilen
+          </Link>
+
+          {/* Löschen-Button (Client-Komponente) */}
+          <RezeptLoeschen rezeptId={rezept.id} rezeptTitel={rezept.titel} />
+        </div>
       </div>
 
       {/* Titel */}
