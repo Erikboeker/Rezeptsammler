@@ -8,7 +8,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Clock, Trash2, ExternalLink, Star } from "lucide-react";
+import { Clock, Trash2, ExternalLink, Star, Pencil } from "lucide-react";
 import { Rezept } from "@/lib/types";
 
 interface Props {
@@ -95,23 +95,39 @@ export function RecipeCard({ rezept, onDelete }: Props) {
               )}
             </div>
 
-            {/* Löschen-Button */}
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loeschtGerade}
-              className={`shrink-0 transition-opacity p-1 rounded hover:bg-muted ${
-                zeigeBestaetigung
-                  ? "opacity-100 text-destructive"
-                  : "opacity-0 group-hover:opacity-100 text-muted-foreground"
-              }`}
-            >
-              {zeigeBestaetigung ? (
-                <span className="text-xs font-medium whitespace-nowrap">Sicher?</span>
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-            </button>
+            <div className="flex items-center gap-1 shrink-0 transition-opacity">
+              {/* Bearbeiten-Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/rezept/${rezept.id}/bearbeiten`;
+                }}
+                className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Rezept bearbeiten"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Löschen-Button */}
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={loeschtGerade}
+                className={`p-1 rounded hover:bg-muted ${
+                  zeigeBestaetigung
+                    ? "opacity-100 text-destructive"
+                    : "opacity-0 group-hover:opacity-100 text-muted-foreground"
+                }`}
+              >
+                {zeigeBestaetigung ? (
+                  <span className="text-xs font-medium whitespace-nowrap">Sicher?</span>
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Titel */}
