@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, Link2, ImageIcon, Upload, X, Check, Crop } from "lucide-react";
 import Cropper, { Area } from "react-easy-crop";
+import "react-easy-crop/react-easy-crop.css";
 import { getCroppedImg } from "@/lib/image-utils";
 import { ExtraktionsErgebnis, ExtractionStatus } from "@/lib/types";
 import { RecipePreview } from "./RecipePreview";

@@ -8,7 +8,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import Cropper, { Area } from "react-easy-crop";
-import { Upload, X, Check, Loader2, Crop } from "lucide-react";
+import "react-easy-crop/react-easy-crop.css";
+import { Upload, X, Check, Loader2, Crop, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getCroppedImg } from "@/lib/image-utils";
 import { supabase } from "@/lib/supabase/client";
@@ -201,5 +202,4 @@ export function ImageUpload({ onUpload, currentUrl, label = "Bild hinzufügen" }
   );
 }
 
-// Hilfs-Icon (falls Pencil nicht importiert ist, dachte ich mir ich add es hier lokal oder importiere es korrekt)
-import { Pencil } from "lucide-react";
+// Hilfs-Icon entfernt da es jetzt oben importiert wird
