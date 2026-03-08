@@ -1,6 +1,7 @@
 // ====================================================
 // RecipeHeader – Kopfbereich der Rezept-Detailseite
-// Zeigt Titel, Tags, Bewertungs-Widget, Zeiten und Bildkarussell
+// Zeigt Titel, editierbare Tags, Bewertungs-Widget,
+// Zeiten, Bildkarussell und Löschen-Button
 // ====================================================
 
 import Link from "next/link";
@@ -8,6 +9,8 @@ import { Clock, Users, ExternalLink, ChevronLeft } from "lucide-react";
 import { Rezept } from "@/lib/types";
 import { ImageCarousel } from "./ImageCarousel";
 import { StarBewertung } from "./StarBewertung";
+import { TagEditor } from "./TagEditor";
+import { RezeptLoeschen } from "./RezeptLoeschen";
 
 interface Props {
   rezept: Rezept;
@@ -15,44 +18,38 @@ interface Props {
 
 /**
  * Kopfbereich der Rezept-Detailseite.
- * Enthält Navigation, Metadaten, Tags, Sternebewertung und Bildkarussell.
+ * Enthält Navigation, editierbare Tags, Sternebewertung,
+ * Metadaten, Bildkarussell und Löschen-Funktion.
  */
 export function RecipeHeader({ rezept }: Props) {
-  // Gesamtzeit berechnen
+  // Gesamtzeit aus Vorbereitungs- und Kochzeit berechnen
   const gesamtzeit = (rezept.vorbereitungszeit ?? 0) + (rezept.kochzeit ?? 0);
 
   return (
-    <div>
-      {/* Zurück-Navigation */}
-      <Link
-        href="/bibliothek"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Zur Bibliothek
-      </Link>
+    <div className="space-y-6">
+      {/* Zurück-Navigation + Löschen-Button in einer Zeile */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/bibliothek"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Zur Bibliothek
+        </Link>
 
-      {/* Tags-Zeile */}
-      {rezept.tags && rezept.tags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {rezept.tags.map((tag) => (
-            <span
-              key={tag}
-              className="text-sm px-3 py-1 rounded-full font-medium bg-primary/10 text-primary"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+        {/* Löschen-Button (Client-Komponente) */}
+        <RezeptLoeschen rezeptId={rezept.id} rezeptTitel={rezept.titel} />
+      </div>
 
       {/* Titel */}
-      <h1 className="text-3xl font-bold mb-3">{rezept.titel}</h1>
+      <h1 className="text-3xl font-bold">{rezept.titel}</h1>
 
       {/* Sternebewertung – klickbar zum Bewerten */}
-      <div className="mb-4">
+      <div>
         <p className="text-sm text-muted-foreground mb-1">
-          {rezept.bewertung ? "Meine Bewertung:" : "Noch nicht bewertet – klicke zum Bewerten:"}
+          {rezept.bewertung
+            ? `Meine Bewertung: ${rezept.bewertung}/5`
+            : "Noch nicht bewertet – klicke zum Bewerten:"}
         </p>
         <StarBewertung
           rezeptId={rezept.id}
@@ -60,6 +57,12 @@ export function RecipeHeader({ rezept }: Props) {
           groesse="lg"
           editierbar={true}
         />
+      </div>
+
+      {/* Editierbare Tags (Client-Komponente) */}
+      <div>
+        <p className="text-sm font-medium mb-2">Tags:</p>
+        <TagEditor rezeptId={rezept.id} initialTags={rezept.tags ?? []} />
       </div>
 
       {/* Zeit- und Portionsangaben */}
@@ -101,7 +104,7 @@ export function RecipeHeader({ rezept }: Props) {
       </div>
 
       {/* Bildkarussell */}
-      <div className="mt-8 max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <ImageCarousel rezept={rezept} />
       </div>
     </div>
