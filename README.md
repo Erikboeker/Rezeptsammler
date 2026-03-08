@@ -1,5 +1,7 @@
 # 🍽️ Rezeptsammler
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Erikboeker/Rezeptsammler&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,GEMINI_API_KEY&envDescription=API-Schlüssel%20für%20Supabase%20und%20Google%20Gemini%20werden%20benötigt.)
+
 Eine KI-gestützte Rezept-App, die Rezepte automatisch aus URLs oder Screenshots extrahiert und in einer eigenen Bibliothek speichert.
 
 ## ✨ Features
@@ -19,7 +21,37 @@ Eine KI-gestützte Rezept-App, die Rezepte automatisch aus URLs oder Screenshots
 
 ---
 
-## 🚀 Lokale Installation
+## ☁️ Deployment mit Vercel (empfohlen)
+
+### Option A – Ein-Klick-Deploy
+
+Klicke auf den Button oben ☝️ – Vercel fragt dich automatisch nach den benötigten Umgebungsvariablen:
+
+| Variable | Beschreibung | Wo erhältlich |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL deines Supabase-Projekts | [supabase.com](https://supabase.com) → Projekt → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Öffentlicher Anon-Schlüssel | ebenda |
+| `SUPABASE_SERVICE_ROLE_KEY` | Geheimer Service-Role-Schlüssel ⚠️ | ebenda |
+| `GEMINI_API_KEY` | Google Gemini API-Schlüssel | [aistudio.google.com](https://aistudio.google.com/apikey) |
+
+### Option B – Bestehendes Vercel-Projekt verbinden
+
+1. Gehe zu **[vercel.com/new](https://vercel.com/new)**
+2. Klicke **„Import Git Repository"** → wähle `Rezeptsammler`
+3. Trage unter **„Environment Variables"** alle vier Variablen ein
+4. Klicke **„Deploy"** ✅
+
+### Automatische Deployments
+
+Ab jetzt löst jeder `git push` auf `master` automatisch ein neues Deployment aus – kein manueller Schritt nötig.
+
+### Umgebungsvariablen nachträglich ändern
+
+**Vercel Dashboard → Dein Projekt → Settings → Environment Variables**
+
+---
+
+## 🚀 Lokale Entwicklung
 
 ### 1. Repository klonen
 
@@ -36,28 +68,17 @@ npm install
 
 ### 3. Umgebungsvariablen einrichten
 
-Kopiere die Beispieldatei und trage deine Werte ein:
-
 ```bash
 cp .env.example .env.local
+# .env.local mit deinen echten Werten befüllen
 ```
-
-Öffne `.env.local` und befülle die folgenden Variablen:
-
-| Variable | Beschreibung | Wo erhältlich |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL deines Supabase-Projekts | [supabase.com](https://supabase.com) → Projekt → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Öffentlicher API-Schlüssel | ebenda |
-| `SUPABASE_SERVICE_ROLE_KEY` | Geheimer Service-Role-Schlüssel (**nie veröffentlichen!**) | ebenda |
-| `GEMINI_API_KEY` | Google Gemini API-Schlüssel | [aistudio.google.com](https://aistudio.google.com/apikey) |
 
 ### 4. Supabase-Datenbank einrichten
 
-Führe das Schema-SQL in deinem Supabase-Projekt aus:
+Führe das Schema-SQL in deinem Supabase-Projekt aus (SQL-Editor im Dashboard):
 
-```bash
-# Im Supabase Dashboard unter SQL-Editor einfügen:
-# Inhalt von: supabase/schema.sql
+```
+supabase/schema.sql
 ```
 
 ### 5. App starten
@@ -93,4 +114,4 @@ src/
 
 ## 🔒 Sicherheitshinweis
 
-Die Datei `.env.local` (oder `.env`) enthält geheime API-Schlüssel und wird **niemals** per Git gespeichert (steht in `.gitignore`). Teile diese Schlüssel nicht öffentlich.
+Die Datei `.env.local` enthält geheime API-Schlüssel und wird **niemals** per Git gespeichert (`.gitignore`). Teile insbesondere den `SUPABASE_SERVICE_ROLE_KEY` niemals öffentlich.
