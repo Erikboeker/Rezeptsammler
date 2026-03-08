@@ -47,3 +47,23 @@ export async function DELETE(
     return NextResponse.json({ error: "Löschfehler" }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServerSupabaseClient();
+    const body = await request.json();
+    const { error } = await supabase
+      .from("rezepte")
+      .update(body)
+      .eq("id", params.id);
+
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Updatefehler:", error);
+    return NextResponse.json({ error: "Updatefehler" }, { status: 500 });
+  }
+}

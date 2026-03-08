@@ -27,8 +27,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
       });
       if (!res.ok) throw new Error("Speichern fehlgeschlagen");
       toast.success("Rezept gespeichert!");
-      router.push("/bibliothek");
-      router.refresh();
+      window.location.href = "/bibliothek";
     } catch {
       toast.error("Fehler beim Speichern");
       setSaving(false);
@@ -62,6 +61,18 @@ export function RecipePreview({ initialData, onReset }: Props) {
           Neu starten
         </button>
       </div>
+
+      {/* Bildvorschau */}
+      {(data.bilder_urls?.[0] || data.bild_url) && (
+        <div className="relative h-48 sm:h-64 w-full rounded-xl overflow-hidden bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={data.bilder_urls?.[0] || data.bild_url}
+            alt="Rezeptvorschau"
+            className="object-cover w-full h-full"
+          />
+        </div>
+      )}
 
       {/* Metadaten */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

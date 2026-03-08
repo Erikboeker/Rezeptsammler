@@ -53,6 +53,8 @@ function normalizeResult(raw: any, sourceUrl?: string): ExtraktionsErgebnis {
     titel: raw.titel ?? "Unbekanntes Rezept",
     quelle_url: raw.quelle_url ?? sourceUrl,
     kategorie: raw.kategorie ?? "Sonstiges",
+    bild_url: raw.bild_url ?? undefined,
+    bilder_urls: Array.isArray(raw.bilder_urls) ? [...new Set(raw.bilder_urls as string[])] : [],
     zutaten: Array.isArray(raw.zutaten)
       ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
         raw.zutaten.map((z: any) => ({

@@ -6,5 +6,9 @@ export function createServerSupabaseClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!;
-  return createClient(supabaseUrl, key);
+  return createClient(supabaseUrl, key, {
+    global: {
+      fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
+    },
+  });
 }

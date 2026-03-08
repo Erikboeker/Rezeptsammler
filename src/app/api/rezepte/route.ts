@@ -54,6 +54,8 @@ export async function POST(request: Request) {
         titel: body.titel,
         quelle_url: body.quelle_url ?? null,
         kategorie: body.kategorie,
+        bild_url: body.bild_url ?? (body.bilder_urls?.[0] || null),
+        bilder_urls: body.bilder_urls || null,
         vorbereitungszeit: body.vorbereitungszeit ?? null,
         kochzeit: body.kochzeit ?? null,
         portionen: body.portionen ?? 4,
@@ -61,7 +63,26 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (rezeptError) throw rezeptError;
+    if (rezeptError) {
+      console.warn("Erster Speicherversuch fehlgeschlagen, versuche Fallback...", rezeptError.message);
+      // Fallback: Erneut versuchen ohne bilder_urls (falls Spalte fehlt)
+      const { data: fallbackRezept, error: fallbackError } = await supabase
+        .from("rezepte")
+        .insert({
+          titel: body.titel,
+          quelle_url: body.quelle_url ?? null,
+          kategorie: body.kategorie,
+          bild_url: body.bild_url ?? (body.bilder_urls?.[0] || null),
+          vorbereitungszeit: body.vorbereitungszeit ?? null,
+          kochzeit: body.kochzeit ?? null,
+          portionen: body.portionen ?? 4,
+        })
+        .select()
+        .single();
+      
+      if (fallbackError) throw fallbackError;
+      return NextResponse.json(fallbackRezept, { status: 201 });
+    }
 
     // Zutaten einfügen
     if (body.zutaten?.length > 0) {

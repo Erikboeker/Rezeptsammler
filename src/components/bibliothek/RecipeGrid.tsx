@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import Link from "next/link";
+import { useState, useCallback, useEffect } from "react";
 import { ChefHat } from "lucide-react";
 import { Rezept } from "@/lib/types";
 import { RecipeCard } from "./RecipeCard";
@@ -14,6 +13,10 @@ interface Props {
 export function RecipeGrid({ initialRezepte }: Props) {
   const [rezepte, setRezepte] = useState(initialRezepte);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setRezepte(initialRezepte);
+  }, [initialRezepte]);
 
   const fetchRezepte = useCallback(
     async (kategorie?: string, suche?: string) => {
@@ -41,6 +44,13 @@ export function RecipeGrid({ initialRezepte }: Props) {
 
   return (
     <div className="space-y-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Meine Rezepte</h1>
+        <p className="text-muted-foreground mt-1">
+          {rezepte.length} {rezepte.length === 1 ? "Rezept" : "Rezepte"} gespeichert
+        </p>
+      </div>
+
       <SearchFilter onChange={fetchRezepte} />
 
       {loading ? (
@@ -52,12 +62,7 @@ export function RecipeGrid({ initialRezepte }: Props) {
       ) : rezepte.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <ChefHat className="h-12 w-12 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">Noch keine Rezepte</p>
-          <p className="text-sm mt-1">
-            <Link href="/extrahieren" className="text-primary hover:underline">
-              Erstes Rezept extrahieren
-            </Link>
-          </p>
+          <p className="text-lg font-medium">Keine Rezepte gefunden</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

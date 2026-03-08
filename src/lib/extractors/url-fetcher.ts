@@ -14,6 +14,27 @@ export async function fetchWebPage(url: string): Promise<string> {
   const html = await res.text();
   const root = parse(html);
 
+  // Bild URLs holen bevor etwas gelöscht wird
+  const ogImages = root.querySelectorAll('meta[property="og:image"]').map(meta => meta.getAttribute("content")).filter(Boolean) as string[];
+  const twitterImages = root.querySelectorAll('meta[name="twitter:image"]').map(meta => meta.getAttribute("content")).filter(Boolean) as string[];
+  const articleImages = root.querySelectorAll('img').map(img => img.getAttribute("src")).filter(Boolean) as string[];
+  
+  const allImages = [...new Set([...ogImages, ...twitterImages, ...articleImages])];
+  const absoluteImages = allImages.map(src => {
+    if (src.startsWith("/")) {
+      try {
+        return new URL(src, url).toString();
+      } catch {
+        return src;
+      }
+    }
+    return src;
+  });
+
+  const uniqueAbsoluteImages = [...new Set(absoluteImages)];
+  const bildUrl = uniqueAbsoluteImages[0] || undefined;
+  const bilderUrls = uniqueAbsoluteImages.slice(0, 10); // Max 10 Bilder
+
   // Strukturierte Daten zuerst (zuverlässigste Methode für Rezeptseiten)
   const structuredDataScripts = root.querySelectorAll(
     'script[type="application/ld+json"]'
@@ -22,7 +43,24 @@ export async function fetchWebPage(url: string): Promise<string> {
     try {
       const data = JSON.parse(script.text);
       const recipe = findRecipeInStructuredData(data);
-      if (recipe) return JSON.stringify(recipe);
+      if (recipe) {
+        // Falls LD+JSON eigene Bilder hat, diese bevorzugen
+        let ldImages: string[] = [];
+        if (recipe.image) {
+          if (Array.isArray(recipe.image)) {
+            ldImages = recipe.image.map((img: any) => typeof img === 'string' ? img : img.url);
+          } else {
+            ldImages = [typeof recipe.image === 'string' ? recipe.image : recipe.image.url];
+          }
+        }
+        
+        const finalBilder = Array.from(new Set(ldImages.length > 0 ? ldImages : bilderUrls));
+        return JSON.stringify({ 
+          ...recipe, 
+          "bild_url": finalBilder[0], 
+          "bilder_urls": finalBilder 
+        });
+      }
     } catch {
       // weiter versuchen
     }
@@ -37,9 +75,13 @@ export async function fetchWebPage(url: string): Promise<string> {
   const text = (mainContent ?? root).text
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 20000);
+    .slice(0, 30000);
 
-  return text;
+  const imageInfo = bilderUrls.length > 0 
+    ? `\n\nBilder-Liste: ${bilderUrls.join(", ")}` 
+    : "";
+
+  return `${text}${imageInfo}`;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

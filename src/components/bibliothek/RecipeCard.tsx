@@ -57,11 +57,22 @@ export function RecipeCard({ rezept, onDelete }: Props) {
 
   return (
     <Link href={`/rezept/${rezept.id}`}>
-      <div className="group relative bg-white border rounded-xl overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer">
+      <div className="group relative bg-white border rounded-xl overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col h-full">
         {/* Farbstreifen oben */}
-        <div className={`h-1.5 ${kategorieFarbe.split(" ")[0]}`} />
+        <div className={`h-1.5 shrink-0 ${kategorieFarbe.split(" ")[0]}`} />
 
-        <div className="p-4">
+        {(rezept.bild_url || (rezept.bilder_urls && rezept.bilder_urls.length > 0)) && (
+          <div className="aspect-[4/3] w-full shrink-0 overflow-hidden bg-muted">
+            <img 
+              src={rezept.bild_url || rezept.bilder_urls?.[0]} 
+              alt={rezept.titel} 
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        <div className="p-4 flex flex-col flex-1">
           {/* Kategorie + Löschen */}
           <div className="flex items-start justify-between gap-2 mb-3">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${kategorieFarbe}`}>

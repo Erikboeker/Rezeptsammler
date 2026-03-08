@@ -10,6 +10,7 @@ create table public.rezepte (
   quelle_url        text,
   kategorie         text not null default 'Sonstiges',
   bild_url          text,
+  bilder_urls       text[],
   vorbereitungszeit integer,
   kochzeit          integer,
   portionen         integer default 4,

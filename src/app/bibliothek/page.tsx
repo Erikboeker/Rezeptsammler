@@ -2,6 +2,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { RecipeGrid } from "@/components/bibliothek/RecipeGrid";
 import { Rezept } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Meine Rezepte – Rezeptsammler",
 };
@@ -34,12 +36,6 @@ export default async function BibliothekPage() {
 
   return (
     <div className="container max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Meine Rezepte</h1>
-        <p className="text-muted-foreground mt-1">
-          {rezepte.length} {rezepte.length === 1 ? "Rezept" : "Rezepte"} gespeichert
-        </p>
-      </div>
       <RecipeGrid initialRezepte={rezepte} />
     </div>
   );

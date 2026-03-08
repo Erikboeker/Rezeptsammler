@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2, Link2, ImageIcon, Upload } from "lucide-react";
 import { ExtraktionsErgebnis, ExtractionStatus } from "@/lib/types";
@@ -56,14 +56,34 @@ export function ExtractionForm() {
     }
   }
 
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            processFile(file);
+            break;
+          }
+        }
+      }
+    }
+
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, []);
+
+  async function processFile(file: File) {
     if (file.size > 4 * 1024 * 1024) {
       toast.error("Bild zu groß (max. 4 MB)");
       return;
     }
+
+    setActiveTab("bild");
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -98,6 +118,12 @@ export function ExtractionForm() {
       }
     };
     reader.readAsDataURL(file);
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
   }
 
   function reset() {

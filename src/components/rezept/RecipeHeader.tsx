@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, Users, ExternalLink, ChevronLeft } from "lucide-react";
 import { Rezept } from "@/lib/types";
+import { ImageCarousel } from "./ImageCarousel";
 
 const KATEGORIE_FARBEN: Record<string, string> = {
   Frühstück: "bg-yellow-100 text-yellow-800",
@@ -78,6 +79,10 @@ export function RecipeHeader({ rezept }: Props) {
             Originalrezept
           </a>
         )}
+      </div>
+
+      <div className="mt-8 max-w-2xl mx-auto">
+        <ImageCarousel rezept={rezept} />
       </div>
     </div>
   );

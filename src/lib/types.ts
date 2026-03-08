@@ -19,6 +19,7 @@ export interface Rezept {
   quelle_url?: string;
   kategorie: string;
   bild_url?: string;
+  bilder_urls?: string[];
   vorbereitungszeit?: number;
   kochzeit?: number;
   portionen?: number;
@@ -33,6 +34,8 @@ export interface ExtraktionsErgebnis {
   titel: string;
   quelle_url?: string;
   kategorie: string;
+  bild_url?: string;
+  bilder_urls?: string[];
   zutaten: Zutat[];
   schritte: string[];
   vorbereitungszeit?: number;
