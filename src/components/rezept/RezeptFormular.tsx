@@ -48,7 +48,7 @@ export function RezeptFormular({ rezeptId, initialDaten }: Props) {
   const router = useRouter();
 
   // Schritte aus dem Objekt-Format in reinen Text konvertieren
-  const initialSchritte = (initialDaten?.schritte ?? [""]).map((s) =>
+  const initialSchritte = (initialDaten?.schritte ?? [""]).map((s: any) =>
     typeof s === "string" ? s : s.text
   );
 
