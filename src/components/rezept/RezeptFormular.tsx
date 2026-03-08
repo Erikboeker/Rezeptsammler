@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Save, Loader2, Plus, X } from "lucide-react";
 import { Zutat, EINHEITEN, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "@/components/extraktion/IngredientEditor";
+import { ImageUpload } from "./ImageUpload";
 
 // Leerer Ausgangszustand für ein neues Rezept
 const LEERES_REZEPT = {
@@ -23,6 +24,7 @@ const LEERES_REZEPT = {
   bild_url: "",
   zutaten: [{ menge: "", einheit: "g", zutat: "" }] as Zutat[],
   schritte: [""] as string[],
+  bilder_urls: [] as string[],
   naehrwerte: undefined as { kalorien: number; protein: number; kohlenhydrate: number; fett: number } | undefined,
 };
 
@@ -266,6 +268,38 @@ export function RezeptFormular({ rezeptId, initialDaten }: Props) {
             />
           </div>
         )}
+      </section>
+
+      {/* ── Bilder ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold border-b pb-2">Bilder</h2>
+        <div className="flex flex-wrap gap-4">
+          {/* Vorhandene Bilder anzeigen */}
+          {(daten.bilder_urls ?? []).map((url, i) => (
+            <div key={i} className="relative w-32 h-24 rounded-lg overflow-hidden border group">
+              <img src={url} alt={`Bild ${i + 1}`} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => {
+                  const neu = (daten.bilder_urls ?? []).filter((_, index) => index !== i);
+                  setDaten({ ...daten, bilder_urls: neu });
+                }}
+                className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          
+          {/* Neues Bild hochladen */}
+          <ImageUpload 
+            onUpload={(url) => {
+              const aktuell = daten.bilder_urls ?? [];
+              setDaten({ ...daten, bilder_urls: [...aktuell, url] });
+            }}
+            label="Bild hinzufügen"
+          />
+        </div>
       </section>
 
       {/* ── Zutaten ── */}
