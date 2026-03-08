@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Save, RotateCcw, Loader2 } from "lucide-react";
+import { Save, RotateCcw, Loader2, ImageIcon } from "lucide-react";
 import { ExtraktionsErgebnis, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "./IngredientEditor";
+import { ImageUpload } from "../rezept/ImageUpload";
 
 interface Props {
   initialData: ExtraktionsErgebnis;
@@ -72,17 +73,16 @@ export function RecipePreview({ initialData, onReset }: Props) {
         </button>
       </div>
 
-      {/* Bildvorschau */}
-      {(data.bilder_urls?.[0] || data.bild_url) && (
-        <div className="relative h-48 sm:h-64 w-full rounded-xl overflow-hidden bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={data.bilder_urls?.[0] || data.bild_url}
-            alt="Rezeptvorschau"
-            className="object-cover w-full h-full"
-          />
-        </div>
-      )}
+      {/* Bildvorschau / Upload */}
+      <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-xl overflow-hidden bg-muted border-2 border-dashed">
+        <ImageUpload 
+          currentUrl={data.bilder_urls?.[0] || data.bild_url || ""}
+          onUpload={(url) => {
+            setData({ ...data, bilder_urls: [url], bild_url: url });
+          }}
+          label="Foto zum Rezept hinzufügen"
+        />
+      </div>
 
       {/* Metadaten */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

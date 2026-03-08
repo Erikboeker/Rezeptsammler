@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Trash2, Loader2, ImageIcon, Plus, AlertTriangle, X, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Loader2, ImageIcon, Plus, AlertTriangle, X, Check, Crop } from "lucide-react";
 import { toast } from "sonner";
 import { Rezept } from "@/lib/types";
+import { ImageUpload } from "./ImageUpload";
 
 interface Props {
   rezept: Rezept;
@@ -112,36 +113,33 @@ export function ImageCarousel({ rezept }: Props) {
   if (urls.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="relative w-full aspect-[16/9] bg-muted/50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed shadow-sm text-muted-foreground p-6 text-center">
-          {isSaving ? (
-            <Loader2 className="h-10 w-10 animate-spin mb-4" />
-          ) : (
-            <ImageIcon className="h-10 w-10 mb-4 opacity-50" />
+        <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted/50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed shadow-sm text-muted-foreground transition-all hover:bg-muted/80">
+          <ImageUpload 
+            onUpload={async (url) => {
+              setIsSaving(true);
+              try {
+                const newUrls = [url];
+                await saveUrls(newUrls);
+                setUrls(newUrls);
+                setIndex(0);
+                toast.success("Bild hinzugefügt!");
+                router.refresh();
+              } catch (e) {
+                toast.error("Speichern fehlgeschlagen");
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            label="Bild hochladen"
+          />
+          {!isSaving && (
+            <div className="absolute bottom-6 pointer-events-none text-center">
+              <p className="text-xs mt-2 opacity-60">
+                Oder Bild kopieren und <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Strg+V</kbd> zum Einfügen
+              </p>
+            </div>
           )}
-          <p className="font-medium">Keine Bilder vorhanden</p>
-          <p className="text-sm mt-1 mb-4">
-            Bild kopieren und{" "}
-            <kbd className="px-1 py-0.5 bg-muted border rounded text-xs">Strg+V</kbd>{" "}
-            drücken zum Einfügen
-          </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" /> Bild hochladen
-          </button>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) uploadFile(file);
-          }}
-        />
       </div>
     );
   }
@@ -149,78 +147,84 @@ export function ImageCarousel({ rezept }: Props) {
   return (
     <div className="space-y-3">
       {/* Image container */}
-      <div className="relative w-full aspect-[16/9] bg-muted rounded-2xl shadow-lg border group" style={{ overflow: "hidden" }}>
-        <img
-          src={urls[index]}
-          alt={`${rezept.titel} – Bild ${index + 1}`}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${isSaving ? "opacity-50" : "opacity-100"}`}
-        />
+      <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-muted rounded-2xl shadow-lg border group overflow-hidden">
+        {/* Hier nutzen wir ImageUpload als Overlay zum Ändern, falls gewünscht */}
+        <div className="absolute inset-0">
+          <ImageUpload 
+            currentUrl={urls[index]}
+            onUpload={async (neueUrl) => {
+              setIsSaving(true);
+              try {
+                const neu = [...urls];
+                neu[index] = neueUrl;
+                await saveUrls(neu);
+                setUrls(neu);
+                toast.success("Bild aktualisiert!");
+                router.refresh();
+              } catch (e) {
+                toast.error("Änderung fehlgeschlagen");
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+          />
+        </div>
 
         {isSaving && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-20">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
         )}
 
         {/* Counter */}
         {urls.length > 1 && (
-          <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/50 text-white text-[11px] font-medium backdrop-blur-sm select-none">
+          <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/50 text-white text-[11px] font-medium backdrop-blur-sm select-none z-10">
             {index + 1} / {urls.length}
           </div>
         )}
 
-        {/* Prev / Next */}
+        {/* Prev / Next controls (only if more than 1 image) */}
         {urls.length > 1 && !isSaving && (
           <>
             <button
               type="button"
               onClick={() => setIndex((p) => (p === 0 ? urls.length - 1 : p - 1))}
-              className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button
               type="button"
               onClick={() => setIndex((p) => (p === urls.length - 1 ? 0 : p + 1))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
-
-            {/* Dot indicators */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 p-1.5 rounded-full bg-black/20 backdrop-blur-sm">
-              {urls.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setIndex(i)}
-                  className={`h-2 rounded-full transition-all ${i === index ? "w-4 bg-white" : "w-2 bg-white/50"}`}
-                />
-              ))}
-            </div>
           </>
         )}
       </div>
 
-      {/* Confirmation bar OR action buttons - OUTSIDE overflow:hidden */}
+      {/* Confirmation bar OR action buttons */}
       {confirmDelete ? (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <span className="text-sm font-medium flex-1">Bild {index + 1} wirklich löschen?</span>
-          <button
-            type="button"
-            onClick={executeDelete}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
-          >
-            <Check className="h-4 w-4" /> Ja, löschen
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(false)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-300 hover:bg-red-100 text-sm font-medium transition-colors"
-          >
-            <X className="h-4 w-4" /> Abbrechen
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={executeDelete}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+            >
+              <Check className="h-4 w-4" /> Löschen
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 rounded-lg border border-red-300 hover:bg-red-100 text-sm font-medium transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-between px-1">
@@ -228,34 +232,37 @@ export function ImageCarousel({ rezept }: Props) {
             type="button"
             onClick={() => setConfirmDelete(true)}
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 text-white text-sm font-medium shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50/50 hover:bg-red-50 text-red-600 hover:text-red-700 text-xs font-medium border border-transparent hover:border-red-200 transition-all disabled:opacity-40"
           >
-            <Trash2 className="h-4 w-4" />
-            Bild {index + 1} löschen
+            <Trash2 className="h-3.5 w-3.5" />
+            Bild entfernen
           </button>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-input bg-background hover:bg-accent text-sm font-medium transition-colors disabled:opacity-40"
-          >
-            <Plus className="h-4 w-4" />
-            Bild hinzufügen
-          </button>
+          <div className="h-10 w-32 relative">
+            <ImageUpload 
+              onUpload={async (url) => {
+                setIsSaving(true);
+                try {
+                  const neu = [...urls, url];
+                  await saveUrls(neu);
+                  setUrls(neu);
+                  setIndex(neu.length - 1);
+                  toast.success("Bild hinzugefügt!");
+                  router.refresh();
+                } catch (e) {
+                  toast.error("Speichern fehlgeschlagen");
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              label="Noch ein Foto"
+            />
+          </div>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) uploadFile(file);
-        }}
-      />
     </div>
   );
 }
+
+// uploadFile und restliche JSX entfernt da nun durch ImageUpload ersetzt
+
