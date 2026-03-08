@@ -25,11 +25,21 @@ export function RecipePreview({ initialData, onReset }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Speichern fehlgeschlagen");
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          errMsg = errData?.error ?? errMsg;
+        } catch { /* ignore parse error */ }
+        console.error("Speicherfehler vom Server:", errMsg);
+        throw new Error(errMsg);
+      }
       toast.success("Rezept gespeichert!");
       window.location.href = "/bibliothek";
-    } catch {
-      toast.error("Fehler beim Speichern");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
+      console.error("handleSave Fehler:", msg);
+      toast.error(`Fehler beim Speichern: ${msg}`);
       setSaving(false);
     }
   }
