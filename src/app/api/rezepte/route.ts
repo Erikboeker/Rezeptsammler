@@ -53,7 +53,10 @@ export async function POST(request: Request) {
       .insert({
         titel: body.titel,
         quelle_url: body.quelle_url ?? null,
-        kategorie: body.kategorie,
+        // Tags-Array speichern (ersetzt Kategorie)
+        tags: body.tags ?? [],
+        // Kategorie als Fallback für ältere Daten
+        kategorie: body.kategorie ?? body.tags?.[0] ?? "Sonstiges",
         bild_url: body.bild_url ?? (body.bilder_urls?.[0] || null),
         bilder_urls: body.bilder_urls || null,
         vorbereitungszeit: body.vorbereitungszeit ?? null,

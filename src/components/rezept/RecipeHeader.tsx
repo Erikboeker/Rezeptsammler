@@ -1,33 +1,29 @@
+// ====================================================
+// RecipeHeader – Kopfbereich der Rezept-Detailseite
+// Zeigt Titel, Tags, Bewertungs-Widget, Zeiten und Bildkarussell
+// ====================================================
+
 import Link from "next/link";
 import { Clock, Users, ExternalLink, ChevronLeft } from "lucide-react";
 import { Rezept } from "@/lib/types";
 import { ImageCarousel } from "./ImageCarousel";
-
-const KATEGORIE_FARBEN: Record<string, string> = {
-  Frühstück: "bg-yellow-100 text-yellow-800",
-  Hauptspeise: "bg-orange-100 text-orange-800",
-  Dessert: "bg-pink-100 text-pink-800",
-  Vorspeise: "bg-green-100 text-green-800",
-  Snack: "bg-blue-100 text-blue-800",
-  Suppe: "bg-red-100 text-red-800",
-  Salat: "bg-emerald-100 text-emerald-800",
-  Vegan: "bg-lime-100 text-lime-800",
-  Vegetarisch: "bg-teal-100 text-teal-800",
-  Sonstiges: "bg-gray-100 text-gray-800",
-};
+import { StarBewertung } from "./StarBewertung";
 
 interface Props {
   rezept: Rezept;
 }
 
+/**
+ * Kopfbereich der Rezept-Detailseite.
+ * Enthält Navigation, Metadaten, Tags, Sternebewertung und Bildkarussell.
+ */
 export function RecipeHeader({ rezept }: Props) {
-  const kategorieFarbe =
-    KATEGORIE_FARBEN[rezept.kategorie] ?? KATEGORIE_FARBEN["Sonstiges"];
-  const gesamtzeit =
-    (rezept.vorbereitungszeit ?? 0) + (rezept.kochzeit ?? 0);
+  // Gesamtzeit berechnen
+  const gesamtzeit = (rezept.vorbereitungszeit ?? 0) + (rezept.kochzeit ?? 0);
 
   return (
     <div>
+      {/* Zurück-Navigation */}
       <Link
         href="/bibliothek"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
@@ -36,14 +32,37 @@ export function RecipeHeader({ rezept }: Props) {
         Zur Bibliothek
       </Link>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className={`text-sm px-3 py-1 rounded-full font-medium ${kategorieFarbe}`}>
-          {rezept.kategorie}
-        </span>
+      {/* Tags-Zeile */}
+      {rezept.tags && rezept.tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {rezept.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-sm px-3 py-1 rounded-full font-medium bg-primary/10 text-primary"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Titel */}
+      <h1 className="text-3xl font-bold mb-3">{rezept.titel}</h1>
+
+      {/* Sternebewertung – klickbar zum Bewerten */}
+      <div className="mb-4">
+        <p className="text-sm text-muted-foreground mb-1">
+          {rezept.bewertung ? "Meine Bewertung:" : "Noch nicht bewertet – klicke zum Bewerten:"}
+        </p>
+        <StarBewertung
+          rezeptId={rezept.id}
+          bewertung={rezept.bewertung}
+          groesse="lg"
+          editierbar={true}
+        />
       </div>
 
-      <h1 className="text-3xl font-bold mb-4">{rezept.titel}</h1>
-
+      {/* Zeit- und Portionsangaben */}
       <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
         {rezept.vorbereitungszeit != null && (
           <span className="flex items-center gap-1.5">
@@ -81,6 +100,7 @@ export function RecipeHeader({ rezept }: Props) {
         )}
       </div>
 
+      {/* Bildkarussell */}
       <div className="mt-8 max-w-2xl mx-auto">
         <ImageCarousel rezept={rezept} />
       </div>

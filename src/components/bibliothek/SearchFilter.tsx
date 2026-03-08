@@ -1,35 +1,47 @@
 "use client";
 
+// ====================================================
+// SearchFilter – Suchleiste und Tag-Filter
+// Ersetzt die alten Kategorie-Chips durch dynamische Tag-Chips
+// ====================================================
+
 import { useState, useCallback } from "react";
 import { Search, X } from "lucide-react";
-import { KATEGORIEN } from "@/lib/types";
 
 interface Props {
-  onChange: (kategorie?: string, suche?: string) => void;
+  /** Verfügbare Tags aus allen Rezepten */
+  verfuegbareTags: string[];
+  /** Callback wenn sich Suche oder aktiver Tag ändert */
+  onChange: (tag?: string, suche?: string) => void;
 }
 
-export function SearchFilter({ onChange }: Props) {
+/**
+ * Filtert die Rezept-Bibliothek nach Tags und Suchbegriff.
+ * Tags werden dynamisch aus den vorhandenen Rezepten generiert.
+ */
+export function SearchFilter({ verfuegbareTags, onChange }: Props) {
   const [suche, setSuche] = useState("");
-  const [aktiveKategorie, setAktiveKategorie] = useState("Alle");
+  const [aktiverTag, setAktiverTag] = useState("Alle");
 
-  const update = useCallback(
-    (newKategorie: string, newSuche: string) => {
+  // Kombinierter Update-Handler für Tag und Suche
+  const aktualisiereFilter = useCallback(
+    (neuerTag: string, neueSuche: string) => {
       onChange(
-        newKategorie !== "Alle" ? newKategorie : undefined,
-        newSuche || undefined
+        neuerTag !== "Alle" ? neuerTag : undefined,
+        neueSuche || undefined
       );
     },
     [onChange]
   );
 
-  function handleSuche(value: string) {
-    setSuche(value);
-    update(aktiveKategorie, value);
+  function handleSuche(wert: string) {
+    setSuche(wert);
+    aktualisiereFilter(aktiverTag, wert);
   }
 
-  function handleKategorie(kategorie: string) {
-    setAktiveKategorie(kategorie);
-    update(kategorie, suche);
+  function handleTag(tag: string) {
+    setAktiverTag(tag);
+    aktualisiereFilter(tag, suche);
   }
 
   return (
@@ -54,20 +66,20 @@ export function SearchFilter({ onChange }: Props) {
         )}
       </div>
 
-      {/* Kategorie-Chips */}
+      {/* Tag-Chips – scrollbar horizontal */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {["Alle", ...KATEGORIEN].map((k) => (
+        {["Alle", ...verfuegbareTags].map((tag) => (
           <button
-            key={k}
+            key={tag}
             type="button"
-            onClick={() => handleKategorie(k)}
+            onClick={() => handleTag(tag)}
             className={`flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              aktiveKategorie === k
+              aktiverTag === tag
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted hover:bg-muted/80 text-muted-foreground"
             }`}
           >
-            {k}
+            {tag}
           </button>
         ))}
       </div>

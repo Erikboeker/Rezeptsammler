@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Save, RotateCcw, Loader2 } from "lucide-react";
-import { ExtraktionsErgebnis, KATEGORIEN } from "@/lib/types";
+import { ExtraktionsErgebnis, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "./IngredientEditor";
 
 interface Props {
@@ -94,17 +94,64 @@ export function RecipePreview({ initialData, onReset }: Props) {
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Kategorie</label>
-          <select
-            value={data.kategorie}
-            onChange={(e) => setData({ ...data, kategorie: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-          >
-            {KATEGORIEN.map((k) => (
-              <option key={k} value={k}>{k}</option>
-            ))}
-          </select>
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium mb-2">Tags</label>
+          {/* Vordefinierte Tags als klickbare Chips */}
+          <div className="flex flex-wrap gap-2 mb-2">
+            {ALLE_TAGS.map((tag) => {
+              const IstAktiv = (data.tags ?? []).includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    const aktuelleTags = data.tags ?? [];
+                    const neueTags = IstAktiv
+                      ? aktuelleTags.filter((t) => t !== tag)
+                      : [...aktuelleTags, tag];
+                    setData({ ...data, tags: neueTags });
+                  }}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    IstAktiv
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+          {/* Eigener Tag eingeben */}
+          <input
+            placeholder="Eigenen Tag eingeben und Enter drücken..."
+            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const eingabe = e.currentTarget.value.trim();
+                if (eingabe && !(data.tags ?? []).includes(eingabe)) {
+                  setData({ ...data, tags: [...(data.tags ?? []), eingabe] });
+                }
+                e.currentTarget.value = "";
+              }
+            }}
+          />
+          {/* Aktive Tags anzeigen */}
+          {(data.tags ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {(data.tags ?? []).map((tag) => (
+                <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => setData({ ...data, tags: (data.tags ?? []).filter((t) => t !== tag) })}
+                    className="hover:text-destructive ml-0.5"
+                  >✕</button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Vorbereitungszeit (Min.)</label>

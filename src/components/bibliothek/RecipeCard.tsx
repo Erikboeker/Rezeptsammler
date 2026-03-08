@@ -1,71 +1,74 @@
 "use client";
 
+// ====================================================
+// RecipeCard – Rezept-Kachel für die Bibliothek
+// Zeigt Bild, Titel, Tags, Bewertung und Kochzeit an
+// ====================================================
+
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Clock, Trash2, ExternalLink } from "lucide-react";
+import { Clock, Trash2, ExternalLink, Star } from "lucide-react";
 import { Rezept } from "@/lib/types";
-
-const KATEGORIE_FARBEN: Record<string, string> = {
-  Frühstück: "bg-yellow-100 text-yellow-800",
-  Hauptspeise: "bg-orange-100 text-orange-800",
-  Dessert: "bg-pink-100 text-pink-800",
-  Vorspeise: "bg-green-100 text-green-800",
-  Snack: "bg-blue-100 text-blue-800",
-  Suppe: "bg-red-100 text-red-800",
-  Salat: "bg-emerald-100 text-emerald-800",
-  Vegan: "bg-lime-100 text-lime-800",
-  Vegetarisch: "bg-teal-100 text-teal-800",
-  Sonstiges: "bg-gray-100 text-gray-800",
-};
 
 interface Props {
   rezept: Rezept;
   onDelete: (id: string) => void;
 }
 
+/**
+ * Einzelne Rezept-Kachel für die Bibliothek.
+ * Zeigt Vorschaubild, Tags farblich, Sternebewertung und Zeitinformationen.
+ */
 export function RecipeCard({ rezept, onDelete }: Props) {
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [zeigeBestaetigung, setZeigeBestaetigung] = useState(false);
+  const [loeschtGerade, setLoeschtGerade] = useState(false);
 
+  // Gesamtzeit aus Vorbereitungs- und Kochzeit berechnen
   const gesamtzeit = (rezept.vorbereitungszeit ?? 0) + (rezept.kochzeit ?? 0);
-  const kategorieFarbe =
-    KATEGORIE_FARBEN[rezept.kategorie] ?? KATEGORIE_FARBEN["Sonstiges"];
 
+  // Ersten Tag als Akzentfarbe für den Farbstreifen nutzen
+  const ersterTag = rezept.tags?.[0];
+
+  /**
+   * Löscht das Rezept nach zweifachem Klick (Sicherheitsabfrage).
+   */
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!showConfirm) {
-      setShowConfirm(true);
-      setTimeout(() => setShowConfirm(false), 3000);
+    // Erster Klick: Bestätigung anzeigen, nach 3s automatisch ausblenden
+    if (!zeigeBestaetigung) {
+      setZeigeBestaetigung(true);
+      setTimeout(() => setZeigeBestaetigung(false), 3000);
       return;
     }
 
-    setDeleting(true);
+    setLoeschtGerade(true);
     try {
-      const res = await fetch(`/api/rezepte/${rezept.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      const antwort = await fetch(`/api/rezepte/${rezept.id}`, { method: "DELETE" });
+      if (!antwort.ok) throw new Error();
       toast.success("Rezept gelöscht");
       onDelete(rezept.id);
     } catch {
       toast.error("Löschen fehlgeschlagen");
-      setDeleting(false);
-      setShowConfirm(false);
+      setLoeschtGerade(false);
+      setZeigeBestaetigung(false);
     }
   }
 
   return (
     <Link href={`/rezept/${rezept.id}`}>
       <div className="group relative bg-white border rounded-xl overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col h-full">
-        {/* Farbstreifen oben */}
-        <div className={`h-1.5 shrink-0 ${kategorieFarbe.split(" ")[0]}`} />
+        {/* Farbstreifen oben basierend auf erstem Tag */}
+        <div className={`h-1.5 shrink-0 ${ersterTag ? "bg-primary" : "bg-gray-200"}`} />
 
+        {/* Vorschaubild */}
         {(rezept.bild_url || (rezept.bilder_urls && rezept.bilder_urls.length > 0)) && (
           <div className="aspect-[4/3] w-full shrink-0 overflow-hidden bg-muted">
-            <img 
-              src={rezept.bild_url || rezept.bilder_urls?.[0]} 
-              alt={rezept.titel} 
+            <img
+              src={rezept.bild_url || rezept.bilder_urls?.[0]}
+              alt={rezept.titel}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
@@ -73,22 +76,37 @@ export function RecipeCard({ rezept, onDelete }: Props) {
         )}
 
         <div className="p-4 flex flex-col flex-1">
-          {/* Kategorie + Löschen */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${kategorieFarbe}`}>
-              {rezept.kategorie}
-            </span>
+          {/* Tags + Löschen-Button */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            {/* Tag-Chips (max. 2 anzeigen + Zähler) */}
+            <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+              {(rezept.tags ?? []).slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary truncate max-w-[120px]"
+                >
+                  {tag}
+                </span>
+              ))}
+              {(rezept.tags ?? []).length > 2 && (
+                <span className="text-xs text-muted-foreground">
+                  +{rezept.tags.length - 2}
+                </span>
+              )}
+            </div>
+
+            {/* Löschen-Button */}
             <button
               type="button"
               onClick={handleDelete}
-              disabled={deleting}
-              className={`transition-opacity p-1 rounded hover:bg-muted ${
-                showConfirm
+              disabled={loeschtGerade}
+              className={`shrink-0 transition-opacity p-1 rounded hover:bg-muted ${
+                zeigeBestaetigung
                   ? "opacity-100 text-destructive"
                   : "opacity-0 group-hover:opacity-100 text-muted-foreground"
               }`}
             >
-              {showConfirm ? (
+              {zeigeBestaetigung ? (
                 <span className="text-xs font-medium whitespace-nowrap">Sicher?</span>
               ) : (
                 <Trash2 className="h-3.5 w-3.5" />
@@ -96,11 +114,29 @@ export function RecipeCard({ rezept, onDelete }: Props) {
             </button>
           </div>
 
-          <h3 className="font-semibold text-sm line-clamp-2 mb-3 leading-snug">
+          {/* Titel */}
+          <h3 className="font-semibold text-sm line-clamp-2 mb-2 leading-snug">
             {rezept.titel}
           </h3>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          {/* Sternebewertung (nur Anzeige, nicht klickbar auf der Karte) */}
+          {rezept.bewertung != null && (
+            <div className="flex items-center gap-0.5 mb-2">
+              {[1, 2, 3, 4, 5].map((stern) => (
+                <Star
+                  key={stern}
+                  className={`h-3.5 w-3.5 ${
+                    stern <= (rezept.bewertung ?? 0)
+                      ? "fill-amber-400 text-amber-400"
+                      : "fill-transparent text-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Fußzeile: Kochzeit + Quell-Icon */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2">
             {gesamtzeit > 0 ? (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -111,12 +147,6 @@ export function RecipeCard({ rezept, onDelete }: Props) {
             )}
             {rezept.quelle_url && <ExternalLink className="h-3 w-3" />}
           </div>
-
-          {rezept.zutaten?.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-2">
-              {rezept.zutaten.length} Zutaten
-            </p>
-          )}
         </div>
       </div>
     </Link>
