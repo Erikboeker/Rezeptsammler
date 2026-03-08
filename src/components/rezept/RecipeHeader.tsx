@@ -5,7 +5,7 @@
 // ====================================================
 
 import Link from "next/link";
-import { Clock, Users, ExternalLink, ChevronLeft, Printer } from "lucide-react";
+import { Clock, Users, ExternalLink, ChevronLeft, Printer, Pencil } from "lucide-react";
 import { Rezept } from "@/lib/types";
 import { ImageCarousel } from "./ImageCarousel";
 import { StarBewertung } from "./StarBewertung";
@@ -38,6 +38,15 @@ export function RecipeHeader({ rezept }: Props) {
         </Link>
 
         <div className="flex items-center gap-2">
+          {/* Bearbeiten-Button */}
+          <Link
+            href={`/rezept/${rezept.id}/bearbeiten`}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Pencil className="h-4 w-4" />
+            Bearbeiten
+          </Link>
+
           {/* Drucken / PDF / Teilen */}
           <Link
             href={`/rezept/${rezept.id}/drucken`}
