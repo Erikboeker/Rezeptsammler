@@ -273,33 +273,47 @@ export function RezeptFormular({ rezeptId, initialDaten }: Props) {
       {/* ── Bilder ── */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold border-b pb-2">Bilder</h2>
-        <div className="flex flex-wrap gap-4">
-          {/* Vorhandene Bilder anzeigen */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Bild-Upload für jedes Bild oder neue hinzufügen */}
           {(daten.bilder_urls ?? []).map((url, i) => (
-            <div key={i} className="relative w-32 h-24 rounded-lg overflow-hidden border group">
-              <img src={url} alt={`Bild ${i + 1}`} className="w-full h-full object-cover" />
+            <div key={i} className="relative aspect-[4/3] rounded-lg overflow-hidden border group bg-muted">
+              {/* ImageUpload im Bearbeitungsmodus für vorhandene Bilder */}
+              <ImageUpload 
+                currentUrl={url}
+                onUpload={(neueUrl) => {
+                  const neu = [...(daten.bilder_urls ?? [])];
+                  neu[i] = neueUrl;
+                  setDaten({ ...daten, bilder_urls: neu });
+                }}
+              />
               <button
                 type="button"
                 onClick={() => {
                   const neu = (daten.bilder_urls ?? []).filter((_, index) => index !== i);
                   setDaten({ ...daten, bilder_urls: neu });
                 }}
-                className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Bild entfernen"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
           
-          {/* Neues Bild hochladen */}
-          <ImageUpload 
-            onUpload={(url) => {
-              const aktuell = daten.bilder_urls ?? [];
-              setDaten({ ...daten, bilder_urls: [...aktuell, url] });
-            }}
-            label="Bild hinzufügen"
-          />
+          {/* Button zum Hinzufügen eines neuen Bildes */}
+          <div className="aspect-[4/3]">
+            <ImageUpload 
+              onUpload={(url) => {
+                const aktuell = daten.bilder_urls ?? [];
+                setDaten({ ...daten, bilder_urls: [...aktuell, url] });
+              }}
+              label="Bild hinzufügen"
+            />
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground italic">
+          Tipp: Alle Bilder werden beim Hochladen automatisch auf das 4:3 Format zugeschnitten.
+        </p>
       </section>
 
       {/* ── Zutaten ── */}
