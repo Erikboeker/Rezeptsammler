@@ -7,8 +7,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Rezeptsammler",
-  description: "Dein digitales Kochbuch – Rezepte automatisch aus dem Web extrahieren",
+  title: "Eriks Rezepte",
+  description: "Eriks digitales Kochbuch – Rezepte automatisch aus dem Web extrahieren",
 };
 
 export default function RootLayout({
