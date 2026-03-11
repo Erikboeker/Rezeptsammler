@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Link2, ImageIcon, Upload } from "lucide-react";
+import { Loader2, Link2, ImageIcon, Upload, Crop } from "lucide-react";
 import { ExtraktionsErgebnis, ExtractionStatus } from "@/lib/types";
 import { RecipePreview } from "./RecipePreview";
+import { FotoZuschneidenModal } from "../rezept/FotoZuschneidenModal";
 
 export function ExtractionForm() {
   const [status, setStatus] = useState<ExtractionStatus>("idle");
@@ -13,6 +14,7 @@ export function ExtractionForm() {
   const [result, setResult] = useState<ExtraktionsErgebnis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [bildZumZuschneiden, setBildZumZuschneiden] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = status === "fetching" || status === "analyzing";
@@ -66,7 +68,7 @@ export function ExtractionForm() {
           const file = items[i].getAsFile();
           if (file) {
             e.preventDefault();
-            processFile(file);
+            bereiteZuschneidenVor(file);
             break;
           }
         }
@@ -77,53 +79,63 @@ export function ExtractionForm() {
     return () => document.removeEventListener("paste", handlePaste);
   }, []);
 
-  async function processFile(file: File) {
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("Bild zu groß (max. 4 MB)");
+  /**
+   * Liest die Datei ein und öffnet das Zuschneiden-Modal
+   */
+  async function bereiteZuschneidenVor(file: File) {
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Originalbild zu groß (max. 8 MB)");
       return;
     }
 
     setActiveTab("bild");
-
     const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setImagePreview(dataUrl);
-      const base64 = dataUrl.split(",")[1];
-
-      setError(null);
-      setResult(null);
-      setStatus("analyzing");
-
-      try {
-        const res = await fetch("/api/extrahieren", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "bild", base64, mimeType: file.type }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json() as { error: string };
-          throw new Error(data.error ?? "Extraktion fehlgeschlagen");
-        }
-
-        const data = await res.json() as ExtraktionsErgebnis;
-        setResult(data);
-        setStatus("done");
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
-        setError(msg);
-        toast.error(msg);
-        setStatus("error");
-      }
+    reader.onload = () => {
+      setStatus("idle");
+      setBildZumZuschneiden(reader.result as string);
     };
     reader.readAsDataURL(file);
+  }
+
+  /**
+   * Startet die Extraktion mit dem zugeschnittenen Bild
+   */
+  async function starteExtraktionMitBild(dataUrl: string) {
+    setBildZumZuschneiden(null);
+    setImagePreview(dataUrl);
+    const base64 = dataUrl.split(",")[1];
+
+    setError(null);
+    setResult(null);
+    setStatus("analyzing");
+
+    try {
+      const res = await fetch("/api/extrahieren", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "bild", base64, mimeType: "image/jpeg" }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json() as { error: string };
+        throw new Error(data.error ?? "Extraktion fehlgeschlagen");
+      }
+
+      const data = await res.json() as ExtraktionsErgebnis;
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
+      setError(msg);
+      toast.error(msg);
+      setStatus("error");
+    }
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    await processFile(file);
+    await bereiteZuschneidenVor(file);
   }
 
   function reset() {
@@ -132,6 +144,7 @@ export function ExtractionForm() {
     setError(null);
     setUrl("");
     setImagePreview(null);
+    setBildZumZuschneiden(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -141,6 +154,16 @@ export function ExtractionForm() {
 
   return (
     <div className="space-y-6">
+      {/* Zuschneiden Modal */}
+      {bildZumZuschneiden && (
+        <FotoZuschneidenModal 
+          bildUrl={bildZumZuschneiden}
+          onAbbruch={() => setBildZumZuschneiden(null)}
+          onSpeichern={starteExtraktionMitBild}
+          // Kein fester Aspekt hier, damit Nutzer Textbereiche frei wählen können
+        />
+      )}
+
       {/* Tabs */}
       <div className="flex border-b">
         {(["url", "bild"] as const).map((tab) => (
@@ -208,12 +231,24 @@ export function ExtractionForm() {
           />
           {imagePreview ? (
             <div className="space-y-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imagePreview}
-                alt="Vorschau"
-                className="w-full max-h-64 object-contain rounded-lg border"
-              />
+              <div className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Vorschau"
+                  className="w-full max-h-64 object-contain rounded-lg border"
+                />
+                {!isLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setBildZumZuschneiden(imagePreview)}
+                    className="absolute top-2 right-2 p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-xs font-medium"
+                  >
+                    <Crop className="h-4 w-4" />
+                    Ausschnitt anpassen
+                  </button>
+                )}
+              </div>
               {isLoading && (
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />

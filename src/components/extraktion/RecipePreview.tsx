@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+// ====================================================
+// RecipePreview – Vorschau und Bearbeitung nach der KI-Extraktion
+// Unterstützt nun vollständiges Bild-Management:
+// Bilder hinzufügen, löschen und zuschneiden
+// ====================================================
+
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Save, RotateCcw, Loader2 } from "lucide-react";
+import { Save, RotateCcw, Loader2, Crop, Plus, Trash2, ImageIcon } from "lucide-react";
 import { ExtraktionsErgebnis, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "./IngredientEditor";
+import { FotoZuschneidenModal } from "../rezept/FotoZuschneidenModal";
 
 interface Props {
   initialData: ExtraktionsErgebnis;
@@ -13,10 +19,113 @@ interface Props {
 }
 
 export function RecipePreview({ initialData, onReset }: Props) {
-  const router = useRouter();
   const [data, setData] = useState(initialData);
   const [saving, setSaving] = useState(false);
 
+  // Zustand für das Zuschneiden
+  const [bildZumZuschneiden, setBildZumZuschneiden] = useState<string | null>(null);
+  // Index des Bildes, das bearbeitet wird (null = neues Bild wird hinzugefügt)
+  const [bearbeiteteBildIndex, setBearbeiteteBildIndex] = useState<number | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Paste-Listener: Bild aus Zwischenablage einfügen (Strg+V) ──
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    // Nichts tun, wenn das Zuschneiden-Modal bereits offen ist
+    if (bildZumZuschneiden) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onload = () => {
+            setBildZumZuschneiden(reader.result as string);
+            setBearbeiteteBildIndex(null);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    }
+  }, [bildZumZuschneiden]);
+
+  useEffect(() => {
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [handlePaste]);
+
+  // ── Hilfsfunktion: aktuelle Bilder-Liste ──
+  function holeBilder(): string[] {
+    if (data.bilder_urls && data.bilder_urls.length > 0) return data.bilder_urls;
+    if (data.bild_url) return [data.bild_url];
+    return [];
+  }
+
+  // ── Bilder aktualisieren ──
+  function setzeBilder(neueUrls: string[]) {
+    setData({
+      ...data,
+      bilder_urls: neueUrls,
+      bild_url: neueUrls[0] ?? "",
+    });
+  }
+
+  // ── Bild-Upload: Datei einlesen und Zuschneiden öffnen ──
+  function handleImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBildZumZuschneiden(reader.result as string);
+      setBearbeiteteBildIndex(null); // null = neues Bild
+    };
+    reader.readAsDataURL(file);
+    // Input zurücksetzen, damit dieselbe Datei nochmals gewählt werden kann
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // ── Bestehendes Bild zuschneiden ──
+  function oeffneZuschneiden(index: number) {
+    setBildZumZuschneiden(holeBilder()[index]);
+    setBearbeiteteBildIndex(index);
+  }
+
+  // ── Zuschneiden bestätigt ──
+  function handleZuschneidenSpeichern(neueBildUrl: string) {
+    setBildZumZuschneiden(null);
+    const aktuelle = holeBilder();
+
+    if (bearbeiteteBildIndex !== null) {
+      // Bestehendes Bild ersetzen
+      const neueUrls = [...aktuelle];
+      neueUrls[bearbeiteteBildIndex] = neueBildUrl;
+      setzeBilder(neueUrls);
+    } else {
+      // Neues Bild hinzufügen
+      setzeBilder([...aktuelle, neueBildUrl]);
+    }
+
+    setBearbeiteteBildIndex(null);
+  }
+
+  // ── Bild löschen ──
+  function entferneBild(index: number) {
+    setzeBilder(holeBilder().filter((_, i) => i !== index));
+  }
+
+  // ── Schritte-Verwaltung ──
+  function updateSchritt(index: number, value: string) {
+    const schritte = [...data.schritte];
+    schritte[index] = value;
+    setData({ ...data, schritte });
+  }
+  function addSchritt() { setData({ ...data, schritte: [...data.schritte, ""] }); }
+  function removeSchritt(index: number) { setData({ ...data, schritte: data.schritte.filter((_, i) => i !== index) }); }
+
+  // ── Speichern ──
   async function handleSave() {
     setSaving(true);
     try {
@@ -27,39 +136,32 @@ export function RecipePreview({ initialData, onReset }: Props) {
       });
       if (!res.ok) {
         let errMsg = `HTTP ${res.status}`;
-        try {
-          const errData = await res.json();
-          errMsg = errData?.error ?? errMsg;
-        } catch { /* ignore parse error */ }
-        console.error("Speicherfehler vom Server:", errMsg);
+        try { const errData = await res.json(); errMsg = errData?.error ?? errMsg; } catch { /* ignore */ }
         throw new Error(errMsg);
       }
       toast.success("Rezept gespeichert!");
       window.location.href = "/bibliothek";
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
-      console.error("handleSave Fehler:", msg);
       toast.error(`Fehler beim Speichern: ${msg}`);
       setSaving(false);
     }
   }
 
-  function updateSchritt(index: number, value: string) {
-    const schritte = [...data.schritte];
-    schritte[index] = value;
-    setData({ ...data, schritte });
-  }
-
-  function addSchritt() {
-    setData({ ...data, schritte: [...data.schritte, ""] });
-  }
-
-  function removeSchritt(index: number) {
-    setData({ ...data, schritte: data.schritte.filter((_, i) => i !== index) });
-  }
+  const bilder = holeBilder();
 
   return (
     <div className="space-y-6">
+      {/* Zuschneiden-Modal */}
+      {bildZumZuschneiden && (
+        <FotoZuschneidenModal
+          bildUrl={bildZumZuschneiden}
+          onAbbruch={() => { setBildZumZuschneiden(null); setBearbeiteteBildIndex(null); }}
+          onSpeichern={handleZuschneidenSpeichern}
+        />
+      )}
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Rezept überprüfen &amp; speichern</h2>
         <button
@@ -72,19 +174,72 @@ export function RecipePreview({ initialData, onReset }: Props) {
         </button>
       </div>
 
-      {/* Bildvorschau */}
-      {(data.bilder_urls?.[0] || data.bild_url) && (
-        <div className="relative h-48 sm:h-64 w-full rounded-xl overflow-hidden bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={data.bilder_urls?.[0] || data.bild_url}
-            alt="Rezeptvorschau"
-            className="object-cover w-full h-full"
-          />
-        </div>
-      )}
+      {/* ── Bild-Verwaltung ── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+          <ImageIcon className="h-4 w-4" /> Bilder
+        </h3>
 
-      {/* Metadaten */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {/* Vorhandene Bilder */}
+          {bilder.map((url, i) => (
+            <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-muted group border shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`Bild ${i + 1}`} className="w-full h-full object-cover" />
+
+              {/* Hover-Overlay mit Aktions-Buttons */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                {/* Zuschneiden */}
+                <button
+                  type="button"
+                  onClick={() => oeffneZuschneiden(i)}
+                  title="Zuschneiden"
+                  className="p-2 rounded-lg bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-colors"
+                >
+                  <Crop className="h-4 w-4" />
+                </button>
+                {/* Löschen */}
+                <button
+                  type="button"
+                  onClick={() => entferneBild(i)}
+                  title="Löschen"
+                  className="p-2 rounded-lg bg-red-500/80 hover:bg-red-600 text-white backdrop-blur-sm transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* "Hauptbild"-Badge */}
+              {i === 0 && (
+                <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary text-[10px] font-bold text-white shadow">
+                  Hauptbild
+                </span>
+              )}
+            </div>
+          ))}
+
+          {/* Button zum Hinzufügen weiterer Bilder */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all"
+          >
+            <Plus className="h-6 w-6" />
+            <span className="text-xs font-medium">Bild hinzufügen</span>
+          </button>
+        </div>
+
+        {/* Verstecktes File-Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageAdd}
+          className="hidden"
+        />
+      </div>
+
+      {/* ── Metadaten ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Titel</label>
@@ -96,7 +251,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
         </div>
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium mb-2">Tags</label>
-          {/* Vordefinierte Tags als klickbare Chips */}
+          {/* Vordefinierte Tags */}
           <div className="flex flex-wrap gap-2 mb-2">
             {ALLE_TAGS.map((tag) => {
               const IstAktiv = (data.tags ?? []).includes(tag);
@@ -122,7 +277,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
               );
             })}
           </div>
-          {/* Eigener Tag eingeben */}
+          {/* Eigener Tag */}
           <input
             placeholder="Eigenen Tag eingeben und Enter drücken..."
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -137,7 +292,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
               }
             }}
           />
-          {/* Aktive Tags anzeigen */}
+          {/* Aktive Tags */}
           {(data.tags ?? []).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {(data.tags ?? []).map((tag) => (
@@ -156,42 +311,33 @@ export function RecipePreview({ initialData, onReset }: Props) {
         <div>
           <label className="block text-sm font-medium mb-1">Vorbereitungszeit (Min.)</label>
           <input
-            type="number"
-            min="0"
+            type="number" min="0"
             value={data.vorbereitungszeit ?? ""}
-            onChange={(e) =>
-              setData({ ...data, vorbereitungszeit: Number(e.target.value) || undefined })
-            }
+            onChange={(e) => setData({ ...data, vorbereitungszeit: Number(e.target.value) || undefined })}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Kochzeit (Min.)</label>
           <input
-            type="number"
-            min="0"
+            type="number" min="0"
             value={data.kochzeit ?? ""}
-            onChange={(e) =>
-              setData({ ...data, kochzeit: Number(e.target.value) || undefined })
-            }
+            onChange={(e) => setData({ ...data, kochzeit: Number(e.target.value) || undefined })}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Portionen</label>
           <input
-            type="number"
-            min="1"
+            type="number" min="1"
             value={data.portionen ?? 4}
-            onChange={(e) =>
-              setData({ ...data, portionen: Number(e.target.value) || 4 })
-            }
+            onChange={(e) => setData({ ...data, portionen: Number(e.target.value) || 4 })}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
       </div>
 
-      {/* Zutaten */}
+      {/* ── Zutaten ── */}
       <div>
         <h3 className="font-semibold mb-3">Zutaten</h3>
         <IngredientEditor
@@ -200,7 +346,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
         />
       </div>
 
-      {/* Schritte */}
+      {/* ── Schritte ── */}
       <div>
         <h3 className="font-semibold mb-3">Zubereitung</h3>
         <div className="space-y-2">
@@ -219,9 +365,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
                 type="button"
                 onClick={() => removeSchritt(i)}
                 className="flex-shrink-0 text-muted-foreground hover:text-destructive text-sm mt-2"
-              >
-                ✕
-              </button>
+              >✕</button>
             </div>
           ))}
           <button
@@ -234,7 +378,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
         </div>
       </div>
 
-      {/* Nährwerte */}
+      {/* ── Nährwerte ── */}
       {data.naehrwerte && (
         <div>
           <h3 className="font-semibold mb-3">Nährwerte (pro Portion)</h3>
@@ -250,14 +394,10 @@ export function RecipePreview({ initialData, onReset }: Props) {
               <div key={key}>
                 <label className="block text-xs text-muted-foreground mb-1">{label}</label>
                 <input
-                  type="number"
-                  min="0"
+                  type="number" min="0"
                   value={data.naehrwerte?.[key] ?? ""}
                   onChange={(e) =>
-                    setData({
-                      ...data,
-                      naehrwerte: { ...data.naehrwerte!, [key]: Number(e.target.value) },
-                    })
+                    setData({ ...data, naehrwerte: { ...data.naehrwerte!, [key]: Number(e.target.value) } })
                   }
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -267,7 +407,7 @@ export function RecipePreview({ initialData, onReset }: Props) {
         </div>
       )}
 
-      {/* Speichern */}
+      {/* ── Speichern ── */}
       <button
         type="button"
         onClick={handleSave}
@@ -275,13 +415,9 @@ export function RecipePreview({ initialData, onReset }: Props) {
         className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 px-4 rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
       >
         {saving ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Speichern...
-          </>
+          <><Loader2 className="h-4 w-4 animate-spin" /> Speichern...</>
         ) : (
-          <>
-            <Save className="h-4 w-4" /> Rezept speichern
-          </>
+          <><Save className="h-4 w-4" /> Rezept speichern</>
         )}
       </button>
     </div>

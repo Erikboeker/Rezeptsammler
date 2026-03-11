@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Trash2, Loader2, ImageIcon, Plus, AlertTriangle, X, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Loader2, ImageIcon, Plus, AlertTriangle, X, Check, Crop } from "lucide-react";
 import { toast } from "sonner";
 import { Rezept } from "@/lib/types";
+import { FotoZuschneidenModal } from "./FotoZuschneidenModal";
 
 interface Props {
   rezept: Rezept;
@@ -15,6 +16,10 @@ export function ImageCarousel({ rezept }: Props) {
   const [index, setIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Zustand für das Bild, das gerade zugeschnitten wird (Original-DataURL)
+  const [bildZumZuschneiden, setBildZumZuschneiden] = useState<string | null>(null);
+  // Status, ob ein bestehendes Bild bearbeitet wird (um das richtige URL-Update zu machen)
+  const [bearbeiteBestehendesBild, setBearbeiteBestehendesBild] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function buildUrls(r: Rezept): string[] {
@@ -34,7 +39,7 @@ export function ImageCarousel({ rezept }: Props) {
     setIndex((prev) => Math.min(prev, Math.max(0, urls.length - 1)));
   }, [urls.length]);
 
-  // Paste listener
+  // Paste-Listener für Bilder aus der Zwischenablage
   useEffect(() => {
     const handler = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -44,7 +49,7 @@ export function ImageCarousel({ rezept }: Props) {
           const file = items[i].getAsFile();
           if (file) {
             e.preventDefault();
-            await uploadFile(file);
+            await bereiteBildZuschneidenVor(file);
             break;
           }
         }
@@ -66,12 +71,15 @@ export function ImageCarousel({ rezept }: Props) {
     if (!res.ok) throw new Error("Speicherfehler");
   }
 
-  async function uploadFile(file: File) {
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("Bild zu groß (max. 4 MB)");
+  /**
+   * Bereitet ein hochgeladenes oder eingefügtes Bild zum Zuschneiden vor
+   */
+  async function bereiteBildZuschneidenVor(file: File) {
+    if (file.size > 8 * 1024 * 1024) { // Etwas großzügiger bei Originalen vor dem Crop
+      toast.error("Originalbild zu groß (max. 8 MB)");
       return;
     }
-    setIsSaving(true);
+    
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -79,16 +87,41 @@ export function ImageCarousel({ rezept }: Props) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const newUrls = [...urls, dataUrl];
-      await saveUrls(newUrls);
-      setUrls(newUrls);
-      setIndex(newUrls.length - 1);
-      toast.success("Bild hinzugefügt!");
+      setBildZumZuschneiden(dataUrl);
+      setBearbeiteBestehendesBild(false);
+    } catch {
+      toast.error("Bild konnte nicht geladen werden.");
+    }
+  }
+
+  /**
+   * Wird aufgerufen, wenn das Zuschneiden abgeschlossen ist
+   */
+  async function handleZuschneidenSpeichern(neueBildUrl: string) {
+    setBildZumZuschneiden(null);
+    setIsSaving(true);
+    
+    try {
+      let neueUrls: string[];
+      if (bearbeiteBestehendesBild) {
+        // Bestehendes Bild im Array ersetzen
+        neueUrls = [...urls];
+        neueUrls[index] = neueBildUrl;
+      } else {
+        // Neues Bild hinten anfügen
+        neueUrls = [...urls, neueBildUrl];
+        setIndex(neueUrls.length - 1);
+      }
+      
+      await saveUrls(neueUrls);
+      setUrls(neueUrls);
+      toast.success(bearbeiteBestehendesBild ? "Ausschnitt aktualisiert!" : "Bild hinzugefügt!");
       router.refresh();
     } catch {
-      toast.error("Bild konnte nicht gespeichert werden.");
+      toast.error("Speichern fehlgeschlagen.");
     } finally {
       setIsSaving(false);
+      setBearbeiteBestehendesBild(false);
     }
   }
 
@@ -112,6 +145,14 @@ export function ImageCarousel({ rezept }: Props) {
   if (urls.length === 0) {
     return (
       <div className="space-y-3">
+        {bildZumZuschneiden && (
+          <FotoZuschneidenModal 
+            bildUrl={bildZumZuschneiden}
+            onAbbruch={() => setBildZumZuschneiden(null)}
+            onSpeichern={handleZuschneidenSpeichern}
+            // Frei wählbarer Ausschnitt ohne festes Seitenverhältnis
+          />
+        )}
         <div className="relative w-full aspect-[16/9] bg-muted/50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed shadow-sm text-muted-foreground p-6 text-center">
           {isSaving ? (
             <Loader2 className="h-10 w-10 animate-spin mb-4" />
@@ -139,7 +180,7 @@ export function ImageCarousel({ rezept }: Props) {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) uploadFile(file);
+            if (file) bereiteBildZuschneidenVor(file);
           }}
         />
       </div>
@@ -148,7 +189,20 @@ export function ImageCarousel({ rezept }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Image container */}
+      {/* Zuschneiden Modal */}
+      {bildZumZuschneiden && (
+        <FotoZuschneidenModal 
+          bildUrl={bildZumZuschneiden}
+          onAbbruch={() => {
+            setBildZumZuschneiden(null);
+            setBearbeiteBestehendesBild(false);
+          }}
+          onSpeichern={handleZuschneidenSpeichern}
+          // Frei wählbarer Ausschnitt
+        />
+      )}
+
+      {/* Image-Container */}
       <div className="relative w-full aspect-[16/9] bg-muted rounded-2xl shadow-lg border group" style={{ overflow: "hidden" }}>
         <img
           src={urls[index]}
@@ -169,6 +223,20 @@ export function ImageCarousel({ rezept }: Props) {
           </div>
         )}
 
+        {/* Zuschneiden Button Overlay */}
+        {!isSaving && (
+          <button
+            onClick={() => {
+              setBildZumZuschneiden(urls[index]);
+              setBearbeiteBestehendesBild(true);
+            }}
+            className="absolute top-3 left-3 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-xs font-medium"
+          >
+            <Crop className="h-4 w-4" />
+            Zuschneiden
+          </button>
+        )}
+
         {/* Prev / Next */}
         {urls.length > 1 && !isSaving && (
           <>
@@ -187,7 +255,7 @@ export function ImageCarousel({ rezept }: Props) {
               <ChevronRight className="h-6 w-6" />
             </button>
 
-            {/* Dot indicators */}
+            {/* Dot-Indikatoren */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 p-1.5 rounded-full bg-black/20 backdrop-blur-sm">
               {urls.map((_, i) => (
                 <button
@@ -202,7 +270,7 @@ export function ImageCarousel({ rezept }: Props) {
         )}
       </div>
 
-      {/* Confirmation bar OR action buttons - OUTSIDE overflow:hidden */}
+      {/* Bestätigungsleiste oder Buttons */}
       {confirmDelete ? (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800">
           <AlertTriangle className="h-5 w-5 shrink-0" />
@@ -231,7 +299,7 @@ export function ImageCarousel({ rezept }: Props) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 text-white text-sm font-medium shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 className="h-4 w-4" />
-            Bild {index + 1} löschen
+            Bild löschen
           </button>
 
           <button
@@ -253,7 +321,7 @@ export function ImageCarousel({ rezept }: Props) {
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) uploadFile(file);
+          if (file) bereiteBildZuschneidenVor(file);
         }}
       />
     </div>
