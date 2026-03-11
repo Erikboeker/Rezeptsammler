@@ -73,6 +73,7 @@ export default async function BearbeitenPage({
           kochzeit: rezept.kochzeit,
           portionen: rezept.portionen ?? 4,
           bild_url: rezept.bild_url ?? "",
+          bilder_urls: rezept.bilder_urls ?? [],
           zutaten: rezept.zutaten,
           schritte: schritteAlsText,
           naehrwerte: rezept.naehrwerte,
