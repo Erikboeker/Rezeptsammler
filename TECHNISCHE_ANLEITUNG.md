@@ -10,7 +10,7 @@ Die Anwendung basiert auf dem modernsten Web-Stack für maximale Geschwindigkeit
 
 - **Frontend/Backend:** [Next.js 15](https://nextjs.org/) (App Router Architektur)
 - **Datenbank & API:** [Supabase](https://supabase.com/) (PostgreSQL + PostgREST)
-- **KI-Kern:** [Google Gemini 2.5 Flash](https://aistudio.google.com/) (für Datenextraktion und Bildanalyse)
+- **KI-Kern:** [Google Gemini Flash](https://aistudio.google.com/) (`gemini-flash-latest`, für Datenextraktion und Bildanalyse)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) mit [shadcn/ui](https://ui.shadcn.com/) Komponenten
 - **Deployment:** [Vercel](https://vercel.com/) (Serverless Functions & Edge Network)
 

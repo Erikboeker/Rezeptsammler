@@ -22,7 +22,7 @@ export async function extractWithGemini(
   input: ExtractionInput
 ): Promise<ExtraktionsErgebnis> {
   const model = getGenAI().getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-flash-latest",
     generationConfig: {
       responseMimeType: "application/json",
       temperature: 0.1,
