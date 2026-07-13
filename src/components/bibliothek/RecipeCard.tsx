@@ -67,7 +67,7 @@ export function RecipeCard({ rezept, onDelete }: Props) {
         {(rezept.bild_url || (rezept.bilder_urls && rezept.bilder_urls.length > 0)) && (
           <div className="aspect-[4/3] w-full shrink-0 overflow-hidden bg-muted">
             <img
-              src={rezept.bild_url || rezept.bilder_urls?.[0]}
+              src={rezept.bilder_urls?.[0] || rezept.bild_url}
               alt={rezept.titel}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"

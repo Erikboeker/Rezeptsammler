@@ -111,7 +111,7 @@ export function DruckAnsicht({ rezept }: Props) {
           <div className="w-full aspect-[16/7] rounded-xl overflow-hidden bg-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={rezept.bild_url ?? rezept.bilder_urls?.[0]}
+              src={rezept.bilder_urls?.[0] ?? rezept.bild_url}
               alt={rezept.titel}
               className="w-full h-full object-cover"
             />
