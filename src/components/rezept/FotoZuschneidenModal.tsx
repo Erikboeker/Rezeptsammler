@@ -8,7 +8,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop, type Crop as ReactCropType } from "react-image-crop";
+import ReactCrop, { centerCrop, makeAspectCrop, convertToPixelCrop, Crop, PixelCrop, type Crop as ReactCropType } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { X, Check, Crop as CropIcon } from "lucide-react";
 import { holeZugschnittenesBild } from "@/lib/image-utils";
@@ -35,6 +35,11 @@ export function FotoZuschneidenModal({ bildUrl, onAbbruch, onSpeichern, aspekt }
       : centerCrop({ unit: "%", width: 80, height: 80, x: 10, y: 10 }, width, height);
       
     setCrop(initialCrop);
+    // Ohne das hier würde der Speichern-Button erst aktiv, nachdem der
+    // Nutzer den Rahmen manuell gezogen hat (onComplete feuert nur bei
+    // Interaktion) – der voreingestellte Ausschnitt muss aber sofort
+    // speicherbar sein.
+    setCompletedCrop(convertToPixelCrop(initialCrop, width, height));
   }
 
   const handleSpeichern = async () => {
