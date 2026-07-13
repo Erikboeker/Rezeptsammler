@@ -2,7 +2,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ExtraktionsErgebnis } from "../types";
 import { buildSystemPrompt } from "./prompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+function getGenAI(): GoogleGenerativeAI {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY ist nicht konfiguriert. Bitte die Umgebungsvariable setzen (siehe .env.example)."
+    );
+  }
+  return new GoogleGenerativeAI(apiKey);
+}
 
 interface ExtractionInput {
   text?: string;
@@ -13,7 +21,7 @@ interface ExtractionInput {
 export async function extractWithGemini(
   input: ExtractionInput
 ): Promise<ExtraktionsErgebnis> {
-  const model = genAI.getGenerativeModel({
+  const model = getGenAI().getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
       responseMimeType: "application/json",
