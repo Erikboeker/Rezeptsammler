@@ -10,7 +10,7 @@ Die Anwendung basiert auf dem modernsten Web-Stack für maximale Geschwindigkeit
 
 - **Frontend/Backend:** [Next.js 15](https://nextjs.org/) (App Router Architektur)
 - **Datenbank & API:** [Supabase](https://supabase.com/) (PostgreSQL + PostgREST)
-- **KI-Kern:** [Google Gemini 1.5 Pro](https://aistudio.google.com/) (für Datenextraktion und Bildanalyse)
+- **KI-Kern:** [Google Gemini Flash](https://aistudio.google.com/) (`gemini-flash-latest`, für Datenextraktion und Bildanalyse)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) mit [shadcn/ui](https://ui.shadcn.com/) Komponenten
 - **Deployment:** [Vercel](https://vercel.com/) (Serverless Functions & Edge Network)
 
@@ -26,7 +26,7 @@ Der `Rezeptsammler` nutzt eine relationale PostgreSQL-Datenbank. Das Schema befi
 3. **`schritte`**: Zubereitungsanweisungen (nummeriert).
 4. **`naehrwerte`**: KI-geschätzte Nährstoffe pro Portion.
 
-**Wichtig für die Sicherheit:** Row Level Security (RLS) ist aktuell deaktiviert, da es sich um eine Single-User-Anwendung ohne Authentifizierungs-Zwang handelt.
+**Wichtig für die Sicherheit:** Row Level Security (RLS) ist auf allen Tabellen aktiviert, aber ohne Policies – das sperrt Zugriffe über den öffentlichen Anon-Key komplett aus. Die App selbst nutzt serverseitig ausschließlich den `SUPABASE_SERVICE_ROLE_KEY`, der RLS umgeht, wodurch sie trotz Single-User-Betrieb ohne eigene Authentifizierung weiterhin normal funktioniert. Bestandsprojekte müssen `supabase/migration_enable_rls.sql` einmalig im Supabase SQL-Editor ausführen.
 
 ---
 
