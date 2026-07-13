@@ -65,8 +65,11 @@ create trigger trg_rezepte_updated
   before update on public.rezepte
   for each row execute function update_aktualisiert_am();
 
--- RLS deaktivieren (Single-User-App ohne Auth)
-alter table public.rezepte   disable row level security;
-alter table public.zutaten   disable row level security;
-alter table public.schritte  disable row level security;
-alter table public.naehrwerte disable row level security;
+-- RLS aktivieren, ohne Policies: sperrt den öffentlichen Anon-Key
+-- komplett aus. Die App nutzt serverseitig ausschließlich den
+-- SUPABASE_SERVICE_ROLE_KEY, der RLS umgeht – daher ändert das nichts
+-- am App-Verhalten, verhindert aber Direktzugriff über die REST-API.
+alter table public.rezepte    enable row level security;
+alter table public.zutaten    enable row level security;
+alter table public.schritte   enable row level security;
+alter table public.naehrwerte enable row level security;
