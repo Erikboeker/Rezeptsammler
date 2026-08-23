@@ -5,8 +5,9 @@
 // Zeigt alle Rezepte als Kacheln an, filterbar nach Tags und Suchbegriff
 // ====================================================
 
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { ChefHat } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { ChefHat, Download, Upload, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Rezept } from "@/lib/types";
 import { RecipeCard } from "./RecipeCard";
 import { SearchFilter } from "./SearchFilter";
@@ -101,14 +102,98 @@ export function RecipeGrid({ initialRezepte }: Props) {
     setAlleRezepte((prev) => prev.filter((r) => r.id !== id));
   }
 
+  // ── Export / Import ──
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importiertGerade, setImportiertGerade] = useState(false);
+
+  /** Liest die gewählte JSON-Datei ein und schickt sie an die Import-API */
+  async function handleImportDatei(e: React.ChangeEvent<HTMLInputElement>) {
+    const datei = e.target.files?.[0];
+    e.target.value = ""; // gleiche Datei erneut wählbar machen
+    if (!datei) return;
+
+    setImportiertGerade(true);
+    try {
+      const text = await datei.text();
+      let inhalt: unknown;
+      try {
+        inhalt = JSON.parse(text);
+      } catch {
+        throw new Error("Datei ist kein gültiges JSON");
+      }
+
+      const antwort = await fetch("/api/rezepte/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inhalt),
+      });
+      const daten = await antwort.json() as {
+        importiert?: number;
+        uebersprungen?: number;
+        fehler?: string[];
+        error?: string;
+      };
+      if (!antwort.ok) throw new Error(daten.error ?? "Import fehlgeschlagen");
+
+      const teile = [`${daten.importiert} importiert`];
+      if (daten.uebersprungen) teile.push(`${daten.uebersprungen} bereits vorhanden`);
+      if (daten.fehler?.length) teile.push(`${daten.fehler.length} fehlgeschlagen`);
+      toast.success(`Import abgeschlossen: ${teile.join(", ")}`);
+      if (daten.fehler?.length) console.warn("Import-Fehler:", daten.fehler);
+
+      // Liste neu laden
+      const neu = await fetch("/api/rezepte");
+      if (neu.ok) setAlleRezepte(await neu.json() as Rezept[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import fehlgeschlagen");
+    } finally {
+      setImportiertGerade(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Meine Rezepte</h1>
-        <p className="text-muted-foreground mt-1">
-          {gefilterteRezepte.length} {gefilterteRezepte.length === 1 ? "Rezept" : "Rezepte"}
-          {(aktiverTag || suche) && " gefunden"}
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Meine Rezepte</h1>
+          <p className="text-muted-foreground mt-1">
+            {gefilterteRezepte.length} {gefilterteRezepte.length === 1 ? "Rezept" : "Rezepte"}
+            {(aktiverTag || suche) && " gefunden"}
+          </p>
+        </div>
+
+        {/* Export / Import */}
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/rezepte/export"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Alle Rezepte als JSON-Datei herunterladen"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </a>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportDatei}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importiertGerade}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            title="Rezepte aus einer Export-Datei importieren"
+          >
+            {importiertGerade ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Import
+          </button>
+        </div>
       </div>
 
       {/* Tag-Filter-Komponente */}
