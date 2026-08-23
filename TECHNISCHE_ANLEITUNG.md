@@ -26,7 +26,7 @@ Der `Rezeptsammler` nutzt eine relationale PostgreSQL-Datenbank. Das Schema befi
 3. **`schritte`**: Zubereitungsanweisungen (nummeriert).
 4. **`naehrwerte`**: KI-geschätzte Nährstoffe pro Portion.
 
-**Wichtig für die Sicherheit:** Die App ist mehrbenutzerfähig (Supabase Auth, E-Mail + Passwort). Jedes Rezept gehört über die Spalte `user_id` einem Konto; Row Level Security sorgt mit den Policies aus `supabase/migration_multi_user.sql` dafür, dass jeder Nutzer ausschließlich seine eigenen Rezepte sieht und bearbeitet. Die App läuft serverseitig mit dem Anon-Key und der Cookie-Session des eingeloggten Nutzers (`@supabase/ssr`); der Service-Role-Key wird nicht mehr verwendet. Eine offene Registrierung gibt es nicht – Konten werden im Supabase-Dashboard angelegt.
+**Wichtig für die Sicherheit:** Die App ist mehrbenutzerfähig (Supabase Auth, Google-Login; E-Mail + Passwort als Fallback). Jedes Rezept gehört über die Spalte `user_id` einem Konto; Row Level Security sorgt mit den Policies aus `supabase/migration_multi_user.sql` dafür, dass jeder Nutzer ausschließlich seine eigenen Rezepte sieht und bearbeitet. Die App läuft serverseitig mit dem Anon-Key und der Cookie-Session des eingeloggten Nutzers (`@supabase/ssr`); der Service-Role-Key wird nicht mehr verwendet. Eine offene Registrierung gibt es nicht – Konten werden im Supabase-Dashboard angelegt.
 
 ---
 

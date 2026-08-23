@@ -39,12 +39,14 @@ export async function middleware(request: NextRequest) {
   const pfad = request.nextUrl.pathname;
   const istLoginSeite = pfad === "/login";
   const istApi = pfad.startsWith("/api");
+  // OAuth-Callback (Google) muss ohne Session erreichbar sein
+  const istAuthCallback = pfad.startsWith("/auth");
 
   if (!user) {
     if (istApi) {
       return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
     }
-    if (!istLoginSeite) {
+    if (!istLoginSeite && !istAuthCallback) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
