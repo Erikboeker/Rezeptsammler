@@ -2,17 +2,18 @@
 -- Migration: Mehrbenutzer-Betrieb (jeder sieht nur
 -- seine eigenen Rezepte)
 --
--- VORHER im Supabase-Dashboard erledigen:
---   1. Authentication → Sign In / Providers:
---      "Allow new users to sign up" DEAKTIVIEREN
---      (keine offene Registrierung für Fremde).
---   2. Authentication → Users → "Add user":
---      Beide Konten (deins + das deiner Frau) mit
---      E-Mail + Passwort anlegen, "Auto Confirm User" an.
+-- VORHER erledigen (Google-Login, siehe TECHNISCHE_ANLEITUNG):
+--   1. Google-Provider in Supabase konfigurieren
+--      (Authentication → Sign In / Providers → Google).
+--   2. Beide Personen melden sich EINMAL per Google an –
+--      dabei entstehen die Benutzerkonten.
+--   3. Danach Authentication → Sign In / Providers:
+--      "Allow new users to sign up" DEAKTIVIEREN,
+--      damit sich keine Fremden anmelden können.
 --
 -- DANN dieses Skript im SQL-Editor ausführen –
--- vorher unten im UPDATE die E-Mail-Adresse anpassen,
--- der die bisherigen Rezepte gehören sollen!
+-- das UPDATE unten ordnet die bisherigen Rezepte dem
+-- Konto erik.boeker@gmail.com zu (ggf. anpassen).
 -- ====================================================
 
 -- 1) Besitzer-Spalte: neue Rezepte gehören automatisch
@@ -23,9 +24,8 @@ alter table public.rezepte
 create index if not exists idx_rezepte_user_id on public.rezepte(user_id);
 
 -- 2) Bestehende Rezepte einem Konto zuordnen
---    >>> E-MAIL HIER ANPASSEN <<<
 update public.rezepte
-  set user_id = (select id from auth.users where email = 'bmpfestplatte@googlemail.com')
+  set user_id = (select id from auth.users where email = 'erik.boeker@gmail.com')
   where user_id is null;
 
 -- 3) RLS-Policies: Jeder Nutzer sieht und bearbeitet nur
