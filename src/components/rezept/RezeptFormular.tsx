@@ -12,6 +12,7 @@ import { Save, Loader2, Plus, X } from "lucide-react";
 import { Zutat, EINHEITEN, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "@/components/extraktion/IngredientEditor";
 import { ImageUpload } from "./ImageUpload";
+import { AutoTextarea } from "@/components/ui/AutoTextarea";
 
 // Leerer Ausgangszustand für ein neues Rezept
 const LEERES_REZEPT = {
@@ -334,11 +335,10 @@ export function RezeptFormular({ rezeptId, initialDaten }: Props) {
               <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold mt-1.5">
                 {i + 1}
               </span>
-              <textarea
+              <AutoTextarea
                 value={schritt}
                 onChange={(e) => aktualisiereSchritt(i, e.target.value)}
                 placeholder={`Schritt ${i + 1} beschreiben...`}
-                rows={2}
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               />
               {daten.schritte.length > 1 && (

@@ -12,6 +12,7 @@ import { Save, RotateCcw, Loader2, Crop, Plus, Trash2, ImageIcon } from "lucide-
 import { ExtraktionsErgebnis, ALLE_TAGS } from "@/lib/types";
 import { IngredientEditor } from "./IngredientEditor";
 import { FotoZuschneidenModal } from "../rezept/FotoZuschneidenModal";
+import { AutoTextarea } from "@/components/ui/AutoTextarea";
 
 interface Props {
   initialData: ExtraktionsErgebnis;
@@ -355,11 +356,10 @@ export function RecipePreview({ initialData, onReset }: Props) {
               <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold mt-1.5">
                 {i + 1}
               </span>
-              <textarea
+              <AutoTextarea
                 value={typeof schritt === "string" ? schritt : (schritt as { text: string }).text}
                 onChange={(e) => updateSchritt(i, e.target.value)}
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                rows={2}
               />
               <button
                 type="button"
