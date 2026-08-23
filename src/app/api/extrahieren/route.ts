@@ -6,7 +6,15 @@ export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as { type: string; url?: string; base64?: string; mimeType?: string };
+    const body = await request.json() as { type: string; url?: string; base64?: string; mimeType?: string; text?: string };
+
+    if (body.type === "text") {
+      if (!body.text?.trim()) {
+        return NextResponse.json({ error: "Text fehlt" }, { status: 400 });
+      }
+      const result = await extractWithGemini({ text: body.text });
+      return NextResponse.json(result);
+    }
 
     if (body.type === "url") {
       if (!body.url) {
