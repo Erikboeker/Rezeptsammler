@@ -2,15 +2,16 @@
 
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Link2, ImageIcon, Upload, Crop } from "lucide-react";
+import { Loader2, Link2, ImageIcon, Upload, Crop, ClipboardPaste } from "lucide-react";
 import { ExtraktionsErgebnis, ExtractionStatus } from "@/lib/types";
 import { RecipePreview } from "./RecipePreview";
 import { FotoZuschneidenModal } from "../rezept/FotoZuschneidenModal";
 
 export function ExtractionForm() {
   const [status, setStatus] = useState<ExtractionStatus>("idle");
-  const [activeTab, setActiveTab] = useState<"url" | "bild">("url");
+  const [activeTab, setActiveTab] = useState<"url" | "bild" | "text">("url");
   const [url, setUrl] = useState("");
+  const [pastedText, setPastedText] = useState("");
   const [result, setResult] = useState<ExtraktionsErgebnis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -58,6 +59,37 @@ export function ExtractionForm() {
     }
   }
 
+  async function handleTextSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pastedText.trim()) return;
+
+    setError(null);
+    setResult(null);
+    setStatus("analyzing");
+
+    try {
+      const res = await fetch("/api/extrahieren", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "text", text: pastedText }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json() as { error: string };
+        throw new Error(data.error ?? "Extraktion fehlgeschlagen");
+      }
+
+      const data = await res.json() as ExtraktionsErgebnis;
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
+      setError(msg);
+      toast.error(msg);
+      setStatus("error");
+    }
+  }
+
   useEffect(() => {
     function handlePaste(e: ClipboardEvent) {
       const items = e.clipboardData?.items;
@@ -69,9 +101,23 @@ export function ExtractionForm() {
           if (file) {
             e.preventDefault();
             bereiteZuschneidenVor(file);
-            break;
+            return;
           }
         }
+      }
+
+      // Kein Bild in der Zwischenablage: falls längerer Text eingefügt
+      // wird und der Nutzer nicht gerade in ein Feld tippt (URL-Eingabe
+      // etc.), übernehmen wir den Text direkt als Rezeptvorlage – so
+      // lassen sich z.B. aus WhatsApp oder Notizen kopierte Rezepte ohne
+      // Umweg über eine URL einfügen.
+      const target = e.target as HTMLElement | null;
+      const tippfeldAktiv = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      const text = e.clipboardData?.getData("text/plain");
+      if (!tippfeldAktiv && text && text.trim().length > 30) {
+        e.preventDefault();
+        setActiveTab("text");
+        setPastedText(text);
       }
     }
 
@@ -143,6 +189,7 @@ export function ExtractionForm() {
     setStatus("idle");
     setError(null);
     setUrl("");
+    setPastedText("");
     setImagePreview(null);
     setBildZumZuschneiden(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -166,7 +213,7 @@ export function ExtractionForm() {
 
       {/* Tabs */}
       <div className="flex border-b">
-        {(["url", "bild"] as const).map((tab) => (
+        {(["url", "bild", "text"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -177,8 +224,10 @@ export function ExtractionForm() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab === "url" ? <Link2 className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
-            {tab === "url" ? "URL / Link" : "Foto / Screenshot"}
+            {tab === "url" && <Link2 className="h-4 w-4" />}
+            {tab === "bild" && <ImageIcon className="h-4 w-4" />}
+            {tab === "text" && <ClipboardPaste className="h-4 w-4" />}
+            {tab === "url" ? "URL / Link" : tab === "bild" ? "Foto / Screenshot" : "Text einfügen"}
           </button>
         ))}
       </div>
@@ -282,6 +331,41 @@ export function ExtractionForm() {
             </button>
           )}
         </div>
+      )}
+
+      {/* Text Tab */}
+      {activeTab === "text" && (
+        <form onSubmit={handleTextSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Rezepttext</label>
+            <textarea
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder="Füge hier einen kopierten Rezepttext ein (z.B. aus WhatsApp, einer Notiz-App oder einem PDF)..."
+              disabled={isLoading}
+              rows={8}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 resize-y"
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Tipp: Du kannst den Text mit Strg+V (Cmd+V) auch direkt auf der Seite einfügen.
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading || !pastedText.trim()}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {statusText[status]}
+              </>
+            ) : (
+              "Rezept extrahieren"
+            )}
+          </button>
+        </form>
       )}
 
       {/* Fehleranzeige */}
