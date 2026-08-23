@@ -5,16 +5,35 @@
 // Zeigt App-Name, Version und prominenter Neu-Button
 // ====================================================
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BookOpen, Plus, ChefHat } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { BookOpen, Plus, ChefHat, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 // Versionsnummer aus package.json – wird zur Build-Zeit eingelesen
 const APP_VERSION = "1.1.0";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [angemeldet, setAngemeldet] = useState(false);
+
+  // Login-Status ermitteln (steuert nur die Sichtbarkeit des Logout-Buttons,
+  // der eigentliche Zugriffsschutz liegt in der Middleware)
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase.auth.getUser().then(({ data }) => setAngemeldet(!!data.user));
+  }, [pathname]);
+
+  async function handleLogout() {
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.signOut();
+    setAngemeldet(false);
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <nav className="border-b bg-white sticky top-0 z-50 shadow-sm">
@@ -65,6 +84,18 @@ export function Navbar() {
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             Neu
           </Link>
+
+          {/* Abmelden */}
+          {angemeldet && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Abmelden"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </nav>

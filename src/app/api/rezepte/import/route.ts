@@ -33,13 +33,19 @@ export async function POST(request: Request) {
 
     const supabase = createServerSupabaseClient();
 
-    // Bereits vorhandene IDs in einer Abfrage ermitteln
-    const mitId = rezepte.filter((r) => r.id);
-    const { data: vorhandene, error: vorhandeneError } = mitId.length
-      ? await supabase.from("rezepte").select("id").in("id", mitId.map((r) => r.id))
-      : { data: [], error: null };
-    if (vorhandeneError) throw vorhandeneError;
-    const vorhandeneIds = new Set((vorhandene ?? []).map((r: { id: string }) => r.id));
+    // Eigene Rezepte laden (RLS begrenzt automatisch auf den eingeloggten
+    // Nutzer). Dedupe sowohl über die ID als auch über den Titel – so
+    // erzeugt auch der wiederholte Import einer fremden Export-Datei
+    // (z.B. vom Partner geteilt, IDs gehören dann dem anderen Konto)
+    // keine Duplikate im eigenen Bestand.
+    const { data: eigene, error: eigeneError } = await supabase
+      .from("rezepte")
+      .select("id, titel");
+    if (eigeneError) throw eigeneError;
+    const vorhandeneIds = new Set((eigene ?? []).map((r: { id: string }) => r.id));
+    const vorhandeneTitel = new Set(
+      (eigene ?? []).map((r: { titel: string }) => r.titel.trim().toLowerCase())
+    );
 
     let importiert = 0;
     let uebersprungen = 0;
@@ -50,32 +56,49 @@ export async function POST(request: Request) {
         fehler.push("Eintrag ohne Titel übersprungen");
         continue;
       }
-      if (rezept.id && vorhandeneIds.has(rezept.id)) {
+      if (
+        (rezept.id && vorhandeneIds.has(rezept.id)) ||
+        vorhandeneTitel.has(rezept.titel.trim().toLowerCase())
+      ) {
         uebersprungen++;
         continue;
       }
 
       try {
-        // Nur bekannte Spalten übernehmen (schützt vor Fremdfeldern in der Datei)
-        const { data: neu, error: rezeptError } = await supabase
+        // Nur bekannte Spalten übernehmen (schützt vor Fremdfeldern in der
+        // Datei). user_id setzt die Datenbank per Default auf den
+        // eingeloggten Nutzer.
+        const stammdaten = {
+          titel: rezept.titel,
+          quelle_url: rezept.quelle_url ?? null,
+          kategorie: rezept.kategorie ?? rezept.tags?.[0] ?? "Sonstiges",
+          tags: rezept.tags ?? [],
+          bewertung: rezept.bewertung ?? null,
+          bild_url: rezept.bild_url ?? null,
+          bilder_urls: rezept.bilder_urls ?? null,
+          vorbereitungszeit: rezept.vorbereitungszeit ?? null,
+          kochzeit: rezept.kochzeit ?? null,
+          portionen: rezept.portionen ?? 4,
+          ...(rezept.erstellt_am ? { erstellt_am: rezept.erstellt_am } : {}),
+        };
+
+        let { data: neu, error: rezeptError } = await supabase
           .from("rezepte")
-          .insert({
-            ...(rezept.id ? { id: rezept.id } : {}),
-            titel: rezept.titel,
-            quelle_url: rezept.quelle_url ?? null,
-            kategorie: rezept.kategorie ?? rezept.tags?.[0] ?? "Sonstiges",
-            tags: rezept.tags ?? [],
-            bewertung: rezept.bewertung ?? null,
-            bild_url: rezept.bild_url ?? null,
-            bilder_urls: rezept.bilder_urls ?? null,
-            vorbereitungszeit: rezept.vorbereitungszeit ?? null,
-            kochzeit: rezept.kochzeit ?? null,
-            portionen: rezept.portionen ?? 4,
-            ...(rezept.erstellt_am ? { erstellt_am: rezept.erstellt_am } : {}),
-          })
+          .insert({ ...(rezept.id ? { id: rezept.id } : {}), ...stammdaten })
           .select("id")
           .single();
+
+        // ID-Konflikt: Die ID existiert bereits, gehört aber (durch RLS
+        // unsichtbar) einem anderen Konto → mit neuer ID importieren.
+        if (rezeptError?.code === "23505" && rezept.id) {
+          ({ data: neu, error: rezeptError } = await supabase
+            .from("rezepte")
+            .insert(stammdaten)
+            .select("id")
+            .single());
+        }
         if (rezeptError) throw rezeptError;
+        if (!neu) throw new Error("Kein Rezept-Datensatz zurückgegeben");
 
         if (rezept.zutaten?.length) {
           const { error: zutatenError } = await supabase.from("zutaten").insert(
@@ -112,6 +135,8 @@ export async function POST(request: Request) {
           });
         }
 
+        vorhandeneIds.add(neu.id);
+        vorhandeneTitel.add(rezept.titel.trim().toLowerCase());
         importiert++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
