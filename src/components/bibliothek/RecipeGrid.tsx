@@ -25,6 +25,7 @@ export function RecipeGrid({ initialRezepte }: Props) {
   const [alleRezepte, setAlleRezepte] = useState(initialRezepte);
   const [aktiverTag, setAktiverTag] = useState<string | undefined>(undefined);
   const [suche, setSuche] = useState<string | undefined>(undefined);
+  const [minSterne, setMinSterne] = useState<number | undefined>(undefined);
   const [laedtGerade, setLaedtGerade] = useState(false);
 
   // Wenn die initialen Rezepte sich ändern (z.B. nach Refresh), neu setzen
@@ -41,7 +42,7 @@ export function RecipeGrid({ initialRezepte }: Props) {
     return Array.from(tagMenge).sort();
   }, [alleRezepte]);
 
-  // Rezepte nach aktivem Tag und Suchbegriff filtern (clientseitig)
+  // Rezepte nach Tag, Suchbegriff und Bewertung filtern (clientseitig)
   const gefilterteRezepte = useMemo(() => {
     return alleRezepte.filter((rezept) => {
       // Tag-Filter: Prüfen ob aktiver Tag in rezept.tags enthalten ist
@@ -52,18 +53,32 @@ export function RecipeGrid({ initialRezepte }: Props) {
       const suchePasst =
         !suche || rezept.titel.toLowerCase().includes(suche.toLowerCase());
 
-      return tagPasst && suchePasst;
+      // Sterne-Filter: Mindestbewertung; unbewertete Rezepte fallen raus
+      const sternePasst =
+        minSterne == null || (rezept.bewertung ?? 0) >= minSterne;
+
+      return tagPasst && suchePasst && sternePasst;
     });
-  }, [alleRezepte, aktiverTag, suche]);
+  }, [alleRezepte, aktiverTag, suche, minSterne]);
+
+  /** Zuletzt an den Server geschickte Filterkombination (Tag + Suche) */
+  const letzterServerFilter = useRef("|");
 
   /**
    * Lädt Rezepte bei Suchbegriff-Änderung neu vom Server (für Server-seitige Suche).
-   * Tag-Filterung erfolgt jedoch clientseitig.
+   * Tag- und Sterne-Filterung erfolgen jedoch clientseitig.
    */
   const handleFilterAenderung = useCallback(
-    async (tag?: string, suchbegriff?: string) => {
+    async (tag?: string, suchbegriff?: string, sterne?: number) => {
       setAktiverTag(tag);
       setSuche(suchbegriff);
+      setMinSterne(sterne);
+
+      // Nur bei geänderter Suche/Tag neu laden – ein Klick auf den
+      // Sterne-Filter allein braucht keine Server-Anfrage.
+      const schluessel = `${tag ?? ""}|${suchbegriff ?? ""}`;
+      if (schluessel === letzterServerFilter.current) return;
+      letzterServerFilter.current = schluessel;
 
       // Wenn Suchbegriff vorhanden → Server-Anfrage für Textsuche
       if (suchbegriff) {
@@ -158,7 +173,7 @@ export function RecipeGrid({ initialRezepte }: Props) {
           <h1 className="text-3xl font-bold">Meine Rezepte</h1>
           <p className="text-muted-foreground mt-1">
             {gefilterteRezepte.length} {gefilterteRezepte.length === 1 ? "Rezept" : "Rezepte"}
-            {(aktiverTag || suche) && " gefunden"}
+            {(aktiverTag || suche || minSterne != null) && " gefunden"}
           </p>
         </div>
 
@@ -213,6 +228,13 @@ export function RecipeGrid({ initialRezepte }: Props) {
           <p className="text-lg font-medium">Keine Rezepte gefunden</p>
           {aktiverTag && (
             <p className="text-sm mt-1">Kein Rezept mit Tag „{aktiverTag}"</p>
+          )}
+          {minSterne != null && (
+            <p className="text-sm mt-1">
+              {minSterne === 5
+                ? "Kein Rezept mit 5 Sternen"
+                : `Kein Rezept mit ${minSterne} oder mehr Sternen`}
+            </p>
           )}
         </div>
       ) : (
