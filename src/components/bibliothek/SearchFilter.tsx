@@ -6,29 +6,32 @@
 // ====================================================
 
 import { useState, useCallback } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Star } from "lucide-react";
 
 interface Props {
   /** Verfügbare Tags aus allen Rezepten */
   verfuegbareTags: string[];
-  /** Callback wenn sich Suche oder aktiver Tag ändert */
-  onChange: (tag?: string, suche?: string) => void;
+  /** Callback wenn sich Suche, aktiver Tag oder Sterne-Filter ändert */
+  onChange: (tag?: string, suche?: string, minSterne?: number) => void;
 }
 
 /**
- * Filtert die Rezept-Bibliothek nach Tags und Suchbegriff.
+ * Filtert die Rezept-Bibliothek nach Tags, Suchbegriff und Bewertung.
  * Tags werden dynamisch aus den vorhandenen Rezepten generiert.
  */
 export function SearchFilter({ verfuegbareTags, onChange }: Props) {
   const [suche, setSuche] = useState("");
   const [aktiverTag, setAktiverTag] = useState("Alle");
+  /** Mindestbewertung (undefined = egal) */
+  const [minSterne, setMinSterne] = useState<number | undefined>(undefined);
 
-  // Kombinierter Update-Handler für Tag und Suche
+  // Kombinierter Update-Handler für Tag, Suche und Bewertung
   const aktualisiereFilter = useCallback(
-    (neuerTag: string, neueSuche: string) => {
+    (neuerTag: string, neueSuche: string, neueSterne?: number) => {
       onChange(
         neuerTag !== "Alle" ? neuerTag : undefined,
-        neueSuche || undefined
+        neueSuche || undefined,
+        neueSterne
       );
     },
     [onChange]
@@ -36,12 +39,19 @@ export function SearchFilter({ verfuegbareTags, onChange }: Props) {
 
   function handleSuche(wert: string) {
     setSuche(wert);
-    aktualisiereFilter(aktiverTag, wert);
+    aktualisiereFilter(aktiverTag, wert, minSterne);
   }
 
   function handleTag(tag: string) {
     setAktiverTag(tag);
-    aktualisiereFilter(tag, suche);
+    aktualisiereFilter(tag, suche, minSterne);
+  }
+
+  /** Klick auf denselben Stern hebt den Filter wieder auf */
+  function handleSterne(stern: number) {
+    const neu = minSterne === stern ? undefined : stern;
+    setMinSterne(neu);
+    aktualisiereFilter(aktiverTag, suche, neu);
   }
 
   return (
@@ -82,6 +92,42 @@ export function SearchFilter({ verfuegbareTags, onChange }: Props) {
             {tag}
           </button>
         ))}
+      </div>
+
+      {/* Sterne-Filter: zeigt Rezepte ab der gewählten Bewertung */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground">Bewertung:</span>
+        <div className="flex items-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((stern) => (
+            <button
+              key={stern}
+              type="button"
+              onClick={() => handleSterne(stern)}
+              title={`Ab ${stern} ${stern === 1 ? "Stern" : "Sternen"}`}
+              aria-label={`Ab ${stern} ${stern === 1 ? "Stern" : "Sternen"}`}
+              aria-pressed={minSterne === stern}
+              className="p-0.5 rounded hover:scale-110 transition-transform"
+            >
+              <Star
+                className={`h-5 w-5 ${
+                  minSterne != null && stern <= minSterne
+                    ? "fill-amber-400 text-amber-400"
+                    : "fill-transparent text-gray-300 hover:text-amber-400"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+        {minSterne != null && (
+          <button
+            type="button"
+            onClick={() => handleSterne(minSterne)}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+            {minSterne === 5 ? "nur 5 Sterne" : `ab ${minSterne} Sternen`}
+          </button>
+        )}
       </div>
     </div>
   );
